@@ -31,6 +31,7 @@ Singleton {
     property alias theme: adapter.theme
     property alias wallpaper: adapter.wallpaper
     property alias shell: adapter.shell
+    property alias cursor: adapter.cursor
     property alias system: adapter.system
     property alias session: adapter.session
     property alias media: adapter.media
@@ -178,6 +179,9 @@ Singleton {
                 // Id значков, которые не показывать. nm-applet дублирует индикатор сети,
                 // но сам нужен: он запрашивает пароли для VPN и корпоративного Wi-Fi.
                 property list<string> hidden: ["nm-applet"]
+                // Id значков, которые стоят прямо на панели; остальные — во всплывающем
+                // окне трея (кнопка-стрелка).
+                property list<string> pinned: []
             }
 
             property JsonObject osd: JsonObject {
@@ -264,6 +268,14 @@ Singleton {
                 property bool showRunning: true
                 // Увеличивать значок под мышью.
                 property bool magnify: true
+            }
+
+            // Курсор для niri, GTK и XWayland (services/Cursor.qml).
+            property JsonObject cursor: JsonObject {
+                // Оболочка задаёт тему и размер курсора; выключено — ничего не трогает.
+                property bool manage: true
+                property string theme: "Adwaita"
+                property int size: 24
             }
 
             property JsonObject shell: JsonObject {

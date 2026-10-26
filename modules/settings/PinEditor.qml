@@ -48,7 +48,7 @@ Column {
             width: 180
             height: 30
             radius: Theme.radius.control
-            color: Theme.color.surface
+            color: Theme.color.background
             border.width: input.activeFocus ? 2 : 0
             border.color: Theme.color.focus
 

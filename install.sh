@@ -115,7 +115,7 @@ if [ "$uninstall" -eq 1 ]; then
 
     step "Отключаю перекраску приложений"
     sh "$repo/scripts/install-theme-hooks.sh" --uninstall || true
-    rm -f "$niri_dir/konshell-colors.kdl"
+    rm -f "$niri_dir/konshell-colors.kdl" "$niri_dir/konshell-cursor.kdl"
 
     step "Убираю KonShell из niri"
     if [ -f "$niri_conf" ]; then

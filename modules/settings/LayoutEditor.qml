@@ -7,30 +7,42 @@ import qs.widgets
 // (BarLayoutEditor) и колонок панели под часами (DashboardLayoutEditor).
 // Изменения сразу видны на месте — оно и есть предпросмотр.
 //
+// Управление — перетаскиванием: карточку элемента можно перенести в другое место
+// зоны, в другую зону или в «Скрытые». Крестик на карточке — скрыть, клик по
+// скрытому — вернуть в первую зону.
+//
 //   target   — объект настроек со списками по зонам;
-//   zones    — [{ key, name }] — ключи списков в target и подписи;
+//   zones    — [{ key, name }] — ключи списков в target и подписи (зоны слева направо);
 //   catalog  — [{ id, name, icon, hint }] — все элементы;
 //   defaults — { ключ зоны: [id…] } — для кнопки сброса.
-Column {
+Item {
     id: root
 
     required property var target
     required property var zones
     required property var catalog
     required property var defaults
-    property string emptyText: "Пусто — добавьте элемент из скрытых ниже или перенесите стрелкой"
+    property string emptyText: "Перетащите сюда"
 
     width: parent?.width ?? 0
+    implicitHeight: layout.implicitHeight
 
-    readonly property var placed: zones.reduce((all, z) => all.concat(target[z.key]), [])
+    readonly property var placed: zones.reduce((all, z) => all.concat(Array.from(target[z.key])), [])
     readonly property var hidden: catalog.filter(w => !placed.includes(w.id))
+
+    readonly property Item dragLayer: dragLayerItem
+
+    // Перетаскивание: что несём и куда положим ("" — никуда, "hidden" — в скрытые).
+    property string dragId: ""
+    property string dropZone: ""
+    property int dropIndex: -1
 
     function find(id) {
         return catalog.find(w => w.id === id) ?? null;
     }
 
     function ids(zone) {
-        return target[zone].slice();
+        return Array.from(target[zone]);
     }
 
     // Все зоны записываются вместе и без повторов: перестановка — это одно изменение,
@@ -48,40 +60,25 @@ Column {
         }
     }
 
-    function move(zone, index, delta) {
-        const list = ids(zone);
-        const to = index + delta;
-        if (to < 0 || to >= list.length)
-            return;
-        [list[index], list[to]] = [list[to], list[index]];
-        apply({ [zone]: list });
+    // Положить id в зону на место index (index — среди остальных элементов зоны,
+    // без самого id) или в скрытые.
+    function placeAt(id, zone, index) {
+        const layout = {};
+        for (const z of zones)
+            layout[z.key] = ids(z.key).filter(x => x !== id);
+        if (zone !== "hidden") {
+            const list = layout[zone];
+            list.splice(Math.max(0, Math.min(index, list.length)), 0, id);
+        }
+        apply(layout);
     }
 
-    // В соседнюю зону: влево — в конец левой соседки, вправо — в начало правой,
-    // чтобы элемент оказался рядом с тем местом, где был.
-    function moveZone(zone, index, direction) {
-        const order = zones.map(z => z.key);
-        const targetZone = order[order.indexOf(zone) + direction];
-        if (!targetZone)
-            return;
-        const from = ids(zone);
-        const [id] = from.splice(index, 1);
-        const to = ids(targetZone);
-        if (direction < 0)
-            to.push(id);
-        else
-            to.unshift(id);
-        apply({ [zone]: from, [targetZone]: to });
+    function hide(id) {
+        placeAt(id, "hidden", 0);
     }
 
-    function hide(zone, index) {
-        const list = ids(zone);
-        list.splice(index, 1);
-        apply({ [zone]: list });
-    }
-
-    function show(id, zone) {
-        apply({ [zone]: ids(zone).concat([id]) });
+    function show(id) {
+        placeAt(id, zones[0].key, ids(zones[0].key).length);
     }
 
     function reset() {
@@ -91,203 +88,231 @@ Column {
         apply(layout);
     }
 
-    spacing: Theme.spacing.xl
-
-    Repeater {
-        model: root.zones
-
-        Column {
-            id: zoneColumn
-
-            required property var modelData
-            required property int index
-
-            readonly property var zoneIds: root.target[modelData.key]
-
-            width: root.width
-            spacing: Theme.spacing.sm
-
-            SectionLabel {
-                text: zoneColumn.modelData.name
-            }
-
-            Rectangle {
-                width: parent.width
-                implicitHeight: zoneList.implicitHeight + Theme.spacing.xs * 2
-                radius: Theme.radius.control
-                color: Theme.color.surface
-
-                Column {
-                    id: zoneList
-
-                    x: Theme.spacing.xs
-                    y: Theme.spacing.xs
-                    width: parent.width - Theme.spacing.xs * 2
-
-                    StyledText {
-                        width: parent.width
-                        height: 40
-                        leftPadding: Theme.spacing.md
-                        text: root.emptyText
-                        color: Theme.color.textMuted
-                        font.pixelSize: Theme.font.caption
-                        visible: zoneColumn.zoneIds.length === 0
-                    }
-
-                    Repeater {
-                        model: zoneColumn.zoneIds
-
-                        WidgetRow {
-                            required property string modelData
-                            required property int index
-
-                            widget: root.find(modelData)
-                            width: zoneList.width
-
-                            IconButton {
-                                icon: "go-up-symbolic"
-                                iconSize: 14
-                                enabled: index > 0
-                                Accessible.name: "Выше"
-                                onClicked: root.move(zoneColumn.modelData.key, index, -1)
-                            }
-                            IconButton {
-                                icon: "go-down-symbolic"
-                                iconSize: 14
-                                enabled: index < zoneColumn.zoneIds.length - 1
-                                Accessible.name: "Ниже"
-                                onClicked: root.move(zoneColumn.modelData.key, index, 1)
-                            }
-                            IconButton {
-                                icon: "go-previous-symbolic"
-                                iconSize: 14
-                                enabled: zoneColumn.index > 0
-                                Accessible.name: "Левее"
-                                onClicked: root.moveZone(zoneColumn.modelData.key, index, -1)
-                            }
-                            IconButton {
-                                icon: "go-next-symbolic"
-                                iconSize: 14
-                                enabled: zoneColumn.index < root.zones.length - 1
-                                Accessible.name: "Правее"
-                                onClicked: root.moveZone(zoneColumn.modelData.key, index, 1)
-                            }
-                            IconButton {
-                                icon: "view-conceal-symbolic"
-                                iconSize: 14
-                                Accessible.name: "Скрыть"
-                                onClicked: root.hide(zoneColumn.modelData.key, index)
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    function finishDrag() {
+        if (dragId !== "" && dropZone !== "")
+            placeAt(dragId, dropZone, dropIndex);
+        dragId = "";
+        dropZone = "";
+        dropIndex = -1;
     }
 
     Column {
-        width: parent.width
-        spacing: Theme.spacing.sm
-        visible: root.hidden.length > 0
+        id: layout
 
-        SectionLabel {
-            text: "Скрыто"
+        width: parent.width
+        spacing: Theme.spacing.md
+
+        StyledText {
+            width: parent.width
+            text: "Перетаскивайте карточки: внутри зоны — порядок, между зонами — место, в «Скрытые» — убрать."
+            color: Theme.color.textMuted
+            font.pixelSize: Theme.font.caption
+            wrapMode: Text.Wrap
         }
 
-        Rectangle {
+        // Зоны рядом, слева направо — как на самой панели.
+        Row {
+            id: zoneRow
+
             width: parent.width
-            implicitHeight: hiddenList.implicitHeight + Theme.spacing.xs * 2
-            radius: Theme.radius.control
-            color: Theme.color.surface
+            spacing: Theme.spacing.sm
 
-            Column {
-                id: hiddenList
+            Repeater {
+                model: root.zones
 
-                x: Theme.spacing.xs
-                y: Theme.spacing.xs
-                width: parent.width - Theme.spacing.xs * 2
+                Column {
+                    id: zone
 
-                Repeater {
-                    model: root.hidden
+                    required property var modelData
+                    required property int index
 
-                    WidgetRow {
-                        id: hiddenRow
+                    readonly property string key: modelData.key
+                    readonly property var zoneIds: root.target[key]
+                    readonly property bool dropHere: root.dropZone === key
 
-                        required property var modelData
+                    width: (zoneRow.width - zoneRow.spacing * (root.zones.length - 1)) / root.zones.length
+                    spacing: Theme.spacing.xs
 
-                        widget: modelData
-                        width: hiddenList.width
-                        dimmed: true
+                    StyledText {
+                        leftPadding: Theme.spacing.xs
+                        text: zone.modelData.name
+                        color: Theme.color.textMuted
+                        font.pixelSize: Theme.font.caption
+                        font.weight: Theme.font.medium
+                        elide: Text.ElideRight
+                        width: parent.width
+                    }
 
-                        Repeater {
-                            model: root.zones
+                    Rectangle {
+                        id: zoneBox
 
-                            TextButton {
-                                required property var modelData
+                        width: parent.width
+                        height: Math.max(96, list.implicitHeight + Theme.spacing.xs * 2)
+                        radius: Theme.radius.control
+                        color: zone.dropHere ? Theme.alpha(Theme.color.primary, 0.08) : Theme.color.background
+                        border.width: 1
+                        border.color: zone.dropHere ? Theme.color.primary : "transparent"
 
-                                text: modelData.name
-                                onClicked: root.show(hiddenRow.modelData.id, modelData.key)
+                        Behavior on color {
+                            ColorAnimation { duration: Theme.anim.fast }
+                        }
+
+                        StyledText {
+                            anchors.centerIn: parent
+                            width: parent.width - Theme.spacing.md * 2
+                            horizontalAlignment: Text.AlignHCenter
+                            text: root.emptyText
+                            color: Theme.color.textMuted
+                            font.pixelSize: Theme.font.caption
+                            wrapMode: Text.Wrap
+                            visible: zone.zoneIds.length === 0 || (zone.zoneIds.length === 1 && zone.zoneIds[0] === root.dragId)
+                        }
+
+                        Column {
+                            id: list
+
+                            x: Theme.spacing.xs
+                            y: Theme.spacing.xs
+                            width: parent.width - Theme.spacing.xs * 2
+                            spacing: Theme.spacing.xxs
+
+                            Repeater {
+                                model: zone.zoneIds
+
+                                LayoutCard {
+                                    required property string modelData
+
+                                    editor: root
+                                    itemId: modelData
+                                    width: list.width
+                                }
+                            }
+                        }
+
+                        // Где окажется элемент — линия между карточками.
+                        Rectangle {
+                            x: Theme.spacing.xs
+                            width: parent.width - Theme.spacing.xs * 2
+                            height: 2
+                            radius: 1
+                            color: Theme.color.primary
+                            visible: zone.dropHere && root.dropIndex >= 0
+                            y: {
+                                const cards = Array.from(list.children).filter(c => c.itemId !== undefined && c.itemId !== root.dragId);
+                                if (cards.length === 0 || root.dropIndex < 0)
+                                    return Theme.spacing.xs;
+                                if (root.dropIndex < cards.length)
+                                    return list.y + cards[root.dropIndex].y - Theme.spacing.xxs / 2 - 1;
+                                const last = cards[cards.length - 1];
+                                return list.y + last.y + last.height + Theme.spacing.xxs / 2 - 1;
+                            }
+                        }
+
+                        DropArea {
+                            anchors.fill: parent
+                            keys: ["konshell-layout"]
+
+                            function update(y) {
+                                const cards = Array.from(list.children).filter(c => c.itemId !== undefined && c.itemId !== root.dragId);
+                                let index = 0;
+                                for (const card of cards) {
+                                    if (y > list.y + card.y + card.height / 2)
+                                        index++;
+                                }
+                                root.dropZone = zone.key;
+                                root.dropIndex = index;
+                            }
+
+                            onEntered: drag => update(drag.y)
+                            onPositionChanged: drag => update(drag.y)
+                            onExited: {
+                                if (root.dropZone === zone.key)
+                                    root.dropZone = "";
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    TextButton {
-        text: "Вернуть расположение по умолчанию"
-        onClicked: root.reset()
-    }
-
-    // Строка элемента: иконка, название, подсказка; кнопки действий справа.
-    component WidgetRow: Item {
-        id: row
-
-        property var widget
-        property bool dimmed: false
-        default property alias actions: actionRow.data
-
-        implicitHeight: 48
-
-        SymbolIcon {
-            id: widgetIcon
-
-            anchors.left: parent.left
-            anchors.leftMargin: Theme.spacing.md
-            anchors.verticalCenter: parent.verticalCenter
-            name: row.widget?.icon ?? ""
-            color: row.dimmed ? Theme.color.textMuted : Theme.color.text
-        }
-
+        // Скрытые элементы: перетащите в зону или кликните, чтобы вернуть.
         Column {
-            anchors.left: widgetIcon.right
-            anchors.right: actionRow.left
-            anchors.leftMargin: Theme.spacing.md
-            anchors.rightMargin: Theme.spacing.sm
-            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width
+            spacing: Theme.spacing.xs
 
             StyledText {
-                width: parent.width
-                text: row.widget?.name ?? ""
-                color: row.dimmed ? Theme.color.textMuted : Theme.color.text
-            }
-
-            StyledText {
-                width: parent.width
-                text: row.widget?.hint ?? ""
+                leftPadding: Theme.spacing.xs
+                text: "Скрытые"
                 color: Theme.color.textMuted
                 font.pixelSize: Theme.font.caption
+                font.weight: Theme.font.medium
+            }
+
+            Rectangle {
+                readonly property bool dropHere: root.dropZone === "hidden"
+
+                width: parent.width
+                height: Math.max(52, hiddenFlow.implicitHeight + Theme.spacing.sm * 2)
+                radius: Theme.radius.control
+                color: dropHere ? Theme.alpha(Theme.color.primary, 0.08) : "transparent"
+                border.width: 1
+                border.color: dropHere ? Theme.color.primary : Theme.color.border
+
+                StyledText {
+                    anchors.centerIn: parent
+                    text: "Перетащите сюда, чтобы скрыть"
+                    color: Theme.color.textMuted
+                    font.pixelSize: Theme.font.caption
+                    visible: root.hidden.length === 0
+                }
+
+                Flow {
+                    id: hiddenFlow
+
+                    x: Theme.spacing.sm
+                    y: Theme.spacing.sm
+                    width: parent.width - Theme.spacing.sm * 2
+                    spacing: Theme.spacing.xs
+
+                    Repeater {
+                        model: root.hidden
+
+                        LayoutCard {
+                            required property var modelData
+
+                            editor: root
+                            itemId: modelData.id
+                            compact: true
+                        }
+                    }
+                }
+
+                DropArea {
+                    anchors.fill: parent
+                    keys: ["konshell-layout"]
+                    onEntered: {
+                        root.dropZone = "hidden";
+                        root.dropIndex = 0;
+                    }
+                    onExited: {
+                        if (root.dropZone === "hidden")
+                            root.dropZone = "";
+                    }
+                }
             }
         }
 
-        Row {
-            id: actionRow
-
-            anchors.right: parent.right
-            anchors.rightMargin: Theme.spacing.xs
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Theme.spacing.xxs
+        TextButton {
+            text: "Вернуть расположение по умолчанию"
+            onClicked: root.reset()
         }
+    }
+
+    // Слой над редактором: карточка, пока её несут, переезжает сюда и рисуется поверх всего.
+    Item {
+        id: dragLayerItem
+
+        anchors.fill: parent
+        z: 10
     }
 }

@@ -3,7 +3,8 @@
 // Реестр настроек KonShell: каждый параметр описан один раз, а окно настроек
 // и поиск строятся из этого описания (как у Noctalia).
 //
-// Раздел: id, name, icon, category — категория в боковом меню (categories).
+// Раздел: id, name, icon, category — категория в боковом меню (categories);
+// desc — что в разделе (строка под заголовком).
 //
 // Поля параметра:
 //   section, group      — раздел и группа внутри раздела;
@@ -12,6 +13,8 @@
 //   title, hint         — название и пояснение;
 //   def                 — значение по умолчанию (кнопка сброса показывается, если значение другое);
 //   choices             — [[значение, подпись], …] для choice и flags;
+//   choicesFrom         — вместо choices: имя списка, который окно настроек строит само
+//                         (dynamicChoices в modules/settings/SettingsWindow.qml);
 //   min, max, step, unit — для slider; unit: px | percent | factor | seconds | ms;
 //   when                — [ключ, значение]: показывать, только если параметр ключа равен значению;
 //   action, component   — имя действия или встроенного компонента окна (modules/settings/SettingsWindow.qml);
@@ -24,27 +27,46 @@ var categories = [
 ];
 
 var sections = [
-    { id: "appearance", category: "look", name: "Тема", icon: "preferences-color-symbolic" },
-    { id: "interface", category: "look", name: "Интерфейс", icon: "video-display-symbolic" },
-    { id: "wallpaper", category: "look", name: "Обои", icon: "preferences-desktop-wallpaper-symbolic" },
-    { id: "apps", category: "look", name: "Приложения", icon: "applications-graphics-symbolic" },
+    { id: "appearance", category: "look", name: "Тема", icon: "preferences-color-symbolic",
+      desc: "Тёмный или светлый режим и цвета: из обоев или свой" },
+    { id: "interface", category: "look", name: "Интерфейс", icon: "video-display-symbolic",
+      desc: "Шрифт, скругления, прозрачность, анимации и курсор" },
+    { id: "wallpaper", category: "look", name: "Обои", icon: "preferences-desktop-wallpaper-symbolic",
+      desc: "Картинка рабочего стола, режим показа и автосмена" },
+    { id: "apps", category: "look", name: "Приложения", icon: "applications-graphics-symbolic",
+      desc: "Какие приложения перекрашивать под палитру оболочки" },
 
-    { id: "bar", category: "desktop", name: "Панель", icon: "view-grid-symbolic" },
-    { id: "clock", category: "desktop", name: "Часы и календарь", icon: "x-office-calendar-symbolic" },
-    { id: "notes", category: "desktop", name: "Заметки", icon: "accessories-text-editor-symbolic" },
-    { id: "dock", category: "desktop", name: "Док", icon: "view-app-grid-symbolic" },
-    { id: "launcher", category: "desktop", name: "Лаунчер", icon: "system-search-symbolic" },
-    { id: "clipboard", category: "desktop", name: "Буфер обмена", icon: "edit-paste-symbolic" },
-    { id: "recorder", category: "desktop", name: "Запись экрана", icon: "media-record-symbolic" },
-    { id: "notifications", category: "desktop", name: "Уведомления", icon: "preferences-system-notifications-symbolic" },
-    { id: "osd", category: "desktop", name: "Индикаторы", icon: "display-brightness-symbolic" },
-    { id: "controlCenter", category: "desktop", name: "Центр управления", icon: "sidebar-show-symbolic" },
-    { id: "media", category: "desktop", name: "Музыка", icon: "audio-x-generic-symbolic" },
+    { id: "bar", category: "desktop", name: "Панель", icon: "view-grid-symbolic",
+      desc: "Высота панели, виджеты слева, по центру и справа, значки трея" },
+    { id: "clock", category: "desktop", name: "Часы и календарь", icon: "x-office-calendar-symbolic",
+      desc: "Формат часов, календарь, погода и окно, открывающееся по клику на часы" },
+    { id: "notes", category: "desktop", name: "Заметки", icon: "accessories-text-editor-symbolic",
+      desc: "Где хранить заметки и чем их открывать" },
+    { id: "dock", category: "desktop", name: "Док", icon: "view-app-grid-symbolic",
+      desc: "Закреплённые приложения, вид и автоскрытие" },
+    { id: "launcher", category: "desktop", name: "Лаунчер", icon: "system-search-symbolic",
+      desc: "Окно запуска приложений по Mod+Space: вид и порядок" },
+    { id: "clipboard", category: "desktop", name: "Буфер обмена", icon: "edit-paste-symbolic",
+      desc: "История скопированного по Mod+Alt+V" },
+    { id: "recorder", category: "desktop", name: "Запись экрана", icon: "media-record-symbolic",
+      desc: "Запись экрана: звук, кодирование, папка" },
+    { id: "notifications", category: "desktop", name: "Уведомления", icon: "preferences-system-notifications-symbolic",
+      desc: "Всплывающие уведомления, история и «Не беспокоить»" },
+    { id: "osd", category: "desktop", name: "Индикаторы", icon: "display-brightness-symbolic",
+      desc: "Индикаторы громкости, микрофона и яркости при нажатии клавиш" },
+    { id: "controlCenter", category: "desktop", name: "Центр управления", icon: "sidebar-show-symbolic",
+      desc: "Окно быстрых настроек: сеть, звук, переключатели — его ширина" },
+    { id: "media", category: "desktop", name: "Музыка", icon: "audio-x-generic-symbolic",
+      desc: "Какие плееры не показывать в панели и центре управления" },
 
-    { id: "sound", category: "system", name: "Звук и яркость", icon: "audio-volume-high-symbolic" },
-    { id: "keyboard", category: "system", name: "Клавиатура", icon: "input-keyboard-symbolic" },
-    { id: "power", category: "system", name: "Питание", icon: "battery-good-symbolic" },
-    { id: "lock", category: "system", name: "Блокировка", icon: "system-lock-screen-symbolic" }
+    { id: "sound", category: "system", name: "Звук и яркость", icon: "audio-volume-high-symbolic",
+      desc: "Шаг и пределы громкости и яркости" },
+    { id: "keyboard", category: "system", name: "Клавиатура", icon: "input-keyboard-symbolic",
+      desc: "Подписи раскладок клавиатуры на панели" },
+    { id: "power", category: "system", name: "Питание", icon: "battery-good-symbolic",
+      desc: "Предупреждения о заряде и меню выключения" },
+    { id: "lock", category: "system", name: "Блокировка", icon: "system-lock-screen-symbolic",
+      desc: "Экран блокировки, PIN и блокировка по простою" }
 ];
 
 var options = [
@@ -89,6 +111,15 @@ var options = [
     { section: "interface", group: "Движение", key: "theme.animate", type: "switch", title: "Плавная смена цветов", def: true,
       when: ["theme.reduceMotion", false] },
 
+    { section: "interface", group: "Курсор", key: "cursor.manage", type: "switch", title: "Единый курсор", def: true,
+      hint: "Одна тема и размер для niri, оболочки и приложений — курсор не меняется при переходе между окнами",
+      keywords: "мышь указатель cursor размер" },
+    { section: "interface", group: "Курсор", key: "cursor.theme", type: "choice", title: "Тема курсора", def: "Adwaita",
+      choicesFrom: "cursorThemes", when: ["cursor.manage", true], keywords: "мышь указатель cursor xcursor" },
+    { section: "interface", group: "Курсор", key: "cursor.size", type: "slider", title: "Размер курсора", def: 24,
+      hint: "Уже открытые приложения подхватят после перезапуска", min: 16, max: 48, step: 4, unit: "px",
+      when: ["cursor.manage", true], keywords: "мышь указатель cursor" },
+
     // ---------- Обои ----------
     { section: "wallpaper", group: "Выбор", type: "custom", component: "wallpaperGrid", title: "Обои",
       keywords: "картинка фон" },
@@ -125,9 +156,10 @@ var options = [
       min: 24, max: 48, step: 2, unit: "px" },
     { section: "bar", group: "Виджеты", type: "custom", component: "barLayout", title: "Расположение виджетов",
       keywords: "зоны слева справа центр" },
-    { section: "bar", group: "Трей", key: "tray.hidePassive", type: "switch", title: "Скрывать неактивные значки", def: true },
-    { section: "bar", group: "Трей", key: "tray.hidden", type: "list", title: "Скрытые значки", def: ["nm-applet"],
-      hint: "Id значков через запятую" },
+    { section: "bar", group: "Трей", type: "custom", component: "trayItems", title: "Значки трея",
+      keywords: "трей tray значки закрепить скрыть панель" },
+    { section: "bar", group: "Трей", key: "tray.hidePassive", type: "switch", title: "Скрывать неактивные значки", def: true,
+      hint: "Значки, которые приложение само просит не показывать" },
 
     // ---------- Часы и календарь ----------
     { section: "clock", group: "Часы в панели", key: "clock.format", type: "choice", title: "Формат", def: "ddd d MMM  HH:mm",

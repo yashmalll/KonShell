@@ -1,9 +1,9 @@
 import QtQuick
 import qs.config
 
-// Плитка быстрого переключателя: иконка, название, состояние.
-// Включённая — мягкая заливка primaryContainer, а не яркий акцент:
-// акцент в оболочке один и отведён фокусу и прогрессу.
+// Плитка быстрого переключателя: значок в круге, название, состояние.
+// Включённая — мягкая заливка primaryContainer и акцентный круг под значком:
+// состояние видно и по форме, а не только по оттенку фона.
 // Клик, Enter или пробел переключают; стрелка справа (или →) открывает подробности.
 Rectangle {
     id: root
@@ -20,8 +20,9 @@ Rectangle {
     readonly property color foreground: active ? Theme.color.primaryContainerText : Theme.color.text
     readonly property color base: active ? Theme.color.primaryContainer : Theme.color.surface
 
-    implicitHeight: 52
-    radius: Theme.radius.control
+    implicitHeight: 60
+    radius: Theme.radius.panel
+    opacity: enabled ? 1 : 0.5
     color: area.pressed ? Qt.tint(base, Theme.alpha(foreground, 0.12))
         : area.containsMouse ? Qt.tint(base, Theme.alpha(foreground, 0.08))
         : base
@@ -30,7 +31,7 @@ Rectangle {
         ColorAnimation { duration: Theme.anim.fast }
     }
 
-    activeFocusOnTab: true
+    activeFocusOnTab: enabled
     Keys.onReturnPressed: clicked()
     Keys.onEnterPressed: clicked()
     Keys.onSpacePressed: clicked()
@@ -41,43 +42,58 @@ Rectangle {
 
         anchors.fill: parent
         hoverEnabled: true
+        enabled: root.enabled
         cursorShape: Qt.PointingHandCursor
         onClicked: root.clicked()
     }
 
-    Row {
-        anchors.left: parent.left
-        anchors.right: details.visible ? details.left : parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.leftMargin: Theme.spacing.md
-        anchors.rightMargin: Theme.spacing.xs
-        spacing: Theme.spacing.md
+    // Значок в круге: у включённой плитки круг акцентный.
+    Rectangle {
+        id: badge
 
-        SymbolIcon {
-            anchors.verticalCenter: parent.verticalCenter
-            implicitSize: 18
-            name: root.icon
-            color: root.foreground
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.spacing.sm + 2
+        anchors.verticalCenter: parent.verticalCenter
+        width: 36
+        height: 36
+        radius: Theme.radius.full
+        color: root.active ? Theme.color.primary : Theme.color.surfaceVariant
+
+        Behavior on color {
+            ColorAnimation { duration: Theme.anim.fast }
         }
 
-        Column {
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - 18 - parent.spacing
+        SymbolIcon {
+            anchors.centerIn: parent
+            implicitSize: 18
+            name: root.icon
+            color: root.active ? Theme.color.primaryText : Theme.color.text
+        }
+    }
 
-            StyledText {
-                width: parent.width
-                text: root.title
-                color: root.foreground
-                font.weight: Theme.font.medium
-            }
+    Column {
+        anchors.left: badge.right
+        anchors.right: details.visible ? details.left : parent.right
+        anchors.leftMargin: Theme.spacing.sm
+        anchors.rightMargin: details.visible ? 0 : Theme.spacing.sm
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 1
 
-            StyledText {
-                width: parent.width
-                text: root.subtitle
-                color: root.active ? root.foreground : Theme.color.textMuted
-                font.pixelSize: Theme.font.caption
-                visible: text !== ""
-            }
+        StyledText {
+            width: parent.width
+            text: root.title
+            color: root.foreground
+            font.weight: Theme.font.medium
+            elide: Text.ElideRight
+        }
+
+        StyledText {
+            width: parent.width
+            text: root.subtitle
+            color: root.active ? Theme.alpha(root.foreground, 0.8) : Theme.color.textMuted
+            font.pixelSize: Theme.font.caption
+            elide: Text.ElideRight
+            visible: text !== ""
         }
     }
 
@@ -85,7 +101,7 @@ Rectangle {
         id: details
 
         anchors.right: parent.right
-        anchors.rightMargin: Theme.spacing.xs
+        anchors.rightMargin: Theme.spacing.xxs
         anchors.verticalCenter: parent.verticalCenter
         visible: root.hasDetails
         icon: "go-next-symbolic"

@@ -17,7 +17,7 @@ Rectangle {
 
     visible: player !== null
     implicitHeight: 72
-    radius: Theme.radius.control
+    radius: Theme.radius.panel
     color: Theme.color.surface
 
     Row {

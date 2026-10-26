@@ -1,5 +1,6 @@
 #!/bin/sh
-# Подключает файлы цветов KonShell к приложениям: kitty, GTK 3/4, niri, Zed, Qt (qt6ct).
+# Подключает файлы цветов KonShell к приложениям: kitty, GTK 3/4, niri, Zed, Qt (qt6ct),
+# и файл курсора к niri.
 # Вызывается из install.sh; можно запускать и отдельно.
 #
 #   install-theme-hooks.sh              добавить строки подключения
@@ -76,11 +77,13 @@ ensure_file() {
 }
 
 ensure_file "$config/niri/konshell-colors.kdl"
+ensure_file "$config/niri/konshell-cursor.kdl"
 ensure_file "$config/kitty/konshell-colors.conf"
 ensure_file "$config/gtk-3.0/konshell-colors.css"
 ensure_file "$config/gtk-4.0/konshell-colors.css"
 
 append_hook "$config/niri/config.kdl" 'include "konshell-colors.kdl"' "//"
+append_hook "$config/niri/config.kdl" 'include "konshell-cursor.kdl"' "//"
 append_hook "$config/kitty/kitty.conf" 'include konshell-colors.conf' "#"
 prepend_hook "$config/gtk-3.0/gtk.css" "@import 'konshell-colors.css';"
 prepend_hook "$config/gtk-4.0/gtk.css" "@import 'konshell-colors.css';"

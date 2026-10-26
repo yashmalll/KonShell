@@ -26,5 +26,5 @@ LayoutEditor {
         right: ["media", "notes"],
         extra: ["network"]
     })
-    emptyText: "Пусто — колонка не показывается"
+    emptyText: "Пусто — колонка не показывается. Перетащите карточку сюда"
 }

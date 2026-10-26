@@ -40,6 +40,15 @@ Scope {
         return Array.isArray(option.when[1]) ? option.when[1].includes(current) : current === option.when[1];
     }
 
+    // Списки для choicesFrom в реестре настроек.
+    function dynamicChoices(name) {
+        switch (name) {
+        case "cursorThemes":
+            return Cursor.themes.map(t => [t, t]);
+        }
+        return [];
+    }
+
     function runAction(name) {
         switch (name) {
         case "testNotification":
@@ -155,7 +164,7 @@ Scope {
 
     function customComponent(name) {
         return ({ wallpaperGrid: wallpaperGrid, barLayout: barLayout, dashboardLayout: dashboardLayout,
-            pin: pinEditor })[name] ?? null;
+            pin: pinEditor, trayItems: trayEditor })[name] ?? null;
     }
 
     Component {
@@ -174,6 +183,12 @@ Scope {
         id: dashboardLayout
 
         DashboardLayoutEditor {}
+    }
+
+    Component {
+        id: trayEditor
+
+        TrayEditor {}
     }
 
     Component {
@@ -432,15 +447,32 @@ Scope {
                     anchors.left: sidebar.right
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    height: 72
+                    height: 84
 
-                    StyledText {
+                    readonly property var section: root.sections.find(s => s.id === Ui.settingsSection) ?? null
+
+                    // Название раздела и строка о том, что в нём.
+                    Column {
                         x: content.x
+                        width: content.width - Theme.spacing.xl
                         anchors.verticalCenter: parent.verticalCenter
-                        text: window.query !== "" ? "Результаты поиска"
-                            : root.sections.find(s => s.id === Ui.settingsSection)?.name ?? ""
-                        font.pixelSize: Theme.font.display
-                        font.weight: Theme.font.medium
+                        spacing: Theme.spacing.xxs
+
+                        StyledText {
+                            width: parent.width
+                            text: window.query !== "" ? "Результаты поиска" : header.section?.name ?? ""
+                            font.pixelSize: Theme.font.display
+                            font.weight: Theme.font.medium
+                            elide: Text.ElideRight
+                        }
+
+                        StyledText {
+                            width: parent.width
+                            text: window.query !== "" ? `По запросу «${window.query}»` : header.section?.desc ?? ""
+                            color: Theme.color.textMuted
+                            elide: Text.ElideRight
+                            visible: text !== ""
+                        }
                     }
 
                     // Заголовка окна нет (декорации Qt отключены), поэтому закрыть — здесь, или Esc.
@@ -473,6 +505,7 @@ Scope {
                         width: Math.min(page.width - Theme.spacing.xl * 2, 680)
                         x: Math.max(Theme.spacing.xl, (page.width - width) / 2)
                         spacing: Theme.spacing.xl
+                        bottomPadding: Theme.spacing.lg
 
                         StyledText {
                             width: parent.width
@@ -495,7 +528,7 @@ Scope {
                                     || window.groups[index - 1].section !== modelData.section
 
                                 width: content.width
-                                spacing: Theme.spacing.md
+                                spacing: Theme.spacing.sm
                                 // Группа, все параметры которой скрыты условием when, не показывается.
                                 visible: modelData.options.some(o => root.shown(o))
 
@@ -506,19 +539,61 @@ Scope {
                                     visible: window.query !== "" && groupColumn.firstOfSection
                                 }
 
-                                SectionLabel {
+                                // Группа — заголовок и карточка с параметрами, между ними — линии.
+                                StyledText {
+                                    leftPadding: Theme.spacing.xxs
                                     text: groupColumn.modelData.name
+                                    font.weight: Theme.font.medium
                                 }
 
-                                Repeater {
-                                    model: groupColumn.modelData.options
+                                Rectangle {
+                                    width: parent.width
+                                    implicitHeight: groupOptions.implicitHeight + Theme.spacing.md * 2
+                                    radius: Theme.radius.panel
+                                    color: Theme.color.surface
+                                    border.width: Theme.borders ? 1 : 0
+                                    border.color: Theme.color.border
 
-                                    SettingControl {
-                                        required property var modelData
+                                    Column {
+                                        id: groupOptions
 
-                                        option: modelData
-                                        host: root
-                                        width: groupColumn.width
+                                        x: Theme.spacing.lg
+                                        y: Theme.spacing.md
+                                        width: parent.width - Theme.spacing.lg * 2
+
+                                        Repeater {
+                                            model: groupColumn.modelData.options
+
+                                            Column {
+                                                id: optionItem
+
+                                                required property var modelData
+                                                required property int index
+
+                                                // Линия — над каждым видимым параметром, кроме первого видимого.
+                                                readonly property bool firstShown: !groupColumn.modelData.options
+                                                    .slice(0, index).some(o => root.shown(o))
+
+                                                width: groupOptions.width
+                                                visible: root.shown(modelData)
+                                                topPadding: firstShown ? 0 : Theme.spacing.md
+                                                bottomPadding: Theme.spacing.xxs
+                                                spacing: Theme.spacing.md
+
+                                                Rectangle {
+                                                    width: parent.width
+                                                    height: 1
+                                                    color: Theme.color.border
+                                                    visible: !optionItem.firstShown
+                                                }
+
+                                                SettingControl {
+                                                    option: optionItem.modelData
+                                                    host: root
+                                                    width: optionItem.width
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }

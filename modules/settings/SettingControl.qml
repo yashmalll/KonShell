@@ -14,6 +14,7 @@ Item {
 
     readonly property var value: option.key ? host.read(option.key) : undefined
     readonly property bool isList: Array.isArray(option.def)
+    readonly property var choices: option.choicesFrom ? host.dynamicChoices(option.choicesFrom) : (option.choices ?? [])
     readonly property var plainValue: isList ? Array.from(value ?? []) : value
     readonly property bool resettable: option.key !== undefined && option.def !== undefined
         && JSON.stringify(plainValue) !== JSON.stringify(option.def)
@@ -132,7 +133,7 @@ Item {
                 spacing: Theme.spacing.xs
 
                 Repeater {
-                    model: root.option.choices
+                    model: root.choices
 
                     Chip {
                         required property var modelData
@@ -216,7 +217,7 @@ Item {
                 width: parent.width
                 height: 32
                 radius: Theme.radius.control
-                color: Theme.color.surface
+                color: Theme.color.background
                 border.width: input.activeFocus ? 2 : 0
                 border.color: Theme.color.focus
 
@@ -291,7 +292,7 @@ Item {
                     width: 140
                     height: 32
                     radius: Theme.radius.control
-                    color: Theme.color.surface
+                    color: Theme.color.background
                     border.width: hex.activeFocus ? 2 : (hexInvalid ? 2 : 0)
                     border.color: hexInvalid ? Theme.color.error : Theme.color.focus
 

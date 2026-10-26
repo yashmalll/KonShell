@@ -80,7 +80,7 @@ Column {
                 anchors.fill: parent
                 anchors.margins: Theme.spacing.xxs
                 radius: Theme.radius.control
-                color: Theme.color.surface
+                color: Theme.color.background
                 // Выбранные обои — рамка акцентом и галочка, не только цвет.
                 border.width: cell.selected ? 2 : 0
                 border.color: Theme.color.primary

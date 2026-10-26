@@ -18,9 +18,14 @@ Rectangle {
     implicitHeight: 28
     radius: Theme.radius.full
     opacity: enabled ? 1 : 0.38
-    color: area.pressed ? Theme.alpha(stateColor, 0.12)
+    // Подложка кнопки; по умолчанию её нет — фон только при наведении и нажатии.
+    property color baseColor: "transparent"
+    readonly property bool hovered: area.containsMouse
+
+    readonly property color stateLayer: area.pressed ? Theme.alpha(stateColor, 0.12)
         : area.containsMouse && enabled ? Theme.alpha(stateColor, 0.08)
         : "transparent"
+    color: baseColor.a === 0 ? stateLayer : Qt.tint(baseColor, stateLayer)
 
     activeFocusOnTab: enabled
     Keys.onReturnPressed: clicked()

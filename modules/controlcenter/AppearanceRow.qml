@@ -11,7 +11,7 @@ Rectangle {
     signal clicked
 
     implicitHeight: 52
-    radius: Theme.radius.control
+    radius: Theme.radius.panel
     color: area.pressed ? Qt.tint(Theme.color.surface, Theme.color.pressed)
         : area.containsMouse ? Qt.tint(Theme.color.surface, Theme.color.hover)
         : Theme.color.surface

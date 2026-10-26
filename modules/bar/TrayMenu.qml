@@ -7,10 +7,15 @@ import qs.widgets
 
 // Меню значка трея в стиле оболочки. Подменю открываются в том же окне
 // со строкой «Назад». Клик мимо меню закрывает его (grabFocus).
+// Внизу — пункты оболочки: показывать значок на панели или убрать в трей, скрыть.
 PopupWindow {
     id: root
 
-    required property QsMenuHandle menu
+    // Меню приложения; null — у значка своего меню нет, остаются пункты оболочки.
+    property QsMenuHandle menu: null
+    // Id значка (SystemTrayItem.id) — для пунктов оболочки; пусто — без них.
+    property string itemId: ""
+    readonly property bool pinned: Settings.tray.pinned.includes(itemId)
 
     // Стек открытых подменю; последний элемент показывается.
     property var stack: [menu]
@@ -71,6 +76,8 @@ PopupWindow {
             }
 
             Repeater {
+                id: entries
+
                 model: opener.children
 
                 Loader {
@@ -120,6 +127,45 @@ PopupWindow {
                             }
                         }
                     }
+                }
+            }
+
+            // Пункты оболочки — только на верхнем уровне меню.
+            Item {
+                width: content.width
+                implicitHeight: Theme.spacing.sm + 1
+                visible: root.itemId !== "" && root.stack.length === 1 && entries.count > 0
+
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    height: 1
+                    color: Theme.color.border
+                }
+            }
+
+            MenuRow {
+                visible: root.itemId !== "" && root.stack.length === 1
+                text: root.pinned ? "Убрать в трей" : "Показывать на панели"
+                prefix: root.pinned ? "↓" : "↑"
+                // Сначала закрыть: после записи настроек значок может переехать,
+                // и меню удалится вместе с ним.
+                onClicked: {
+                    const list = Array.from(Settings.tray.pinned).filter(id => id !== root.itemId);
+                    const pinned = root.pinned ? list : list.concat([root.itemId]);
+                    root.close();
+                    Settings.tray.pinned = pinned;
+                }
+            }
+
+            MenuRow {
+                visible: root.itemId !== "" && root.stack.length === 1
+                text: "Скрыть значок"
+                prefix: "×"
+                onClicked: {
+                    const hidden = Array.from(Settings.tray.hidden).concat([root.itemId]);
+                    root.close();
+                    Settings.tray.hidden = hidden;
                 }
             }
         }

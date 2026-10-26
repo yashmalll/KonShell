@@ -13,6 +13,8 @@ Scope {
     // Ссылка на сервис создаёт его при запуске оболочки: синглтоны в QML ленивые.
     readonly property string themeStatus: ColorScheme.status
     readonly property string exportStatus: ThemeExport.lastError
+    // Синглтон курсора создаётся при первом обращении — здесь, при запуске оболочки.
+    readonly property string cursorTheme: Cursor.theme
 
     // Диагностика оболочки:
     //   qs -c konshell ipc call shell memory   # RSS и доля памяти (PSS), МБ
