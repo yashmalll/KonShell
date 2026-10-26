@@ -33,6 +33,9 @@ Singleton {
     }
 
     // Параметры текущей записи — для повтора без видеокарты.
+    // VAAPI уже отказал в этом сеансе — дальше сразу программное кодирование.
+    property bool vaapiBroken: false
+
     property string geometry: ""
     property string output: ""
     property bool software: false
@@ -54,7 +57,7 @@ Singleton {
         preparing = true;
         output = Niri.focusedWorkspace?.output ?? "";
         geometry = "";
-        software = !Settings.recorder.hardware;
+        software = !Settings.recorder.hardware || vaapiBroken;
         if (mode === "region") {
             // Пауза — чтобы панель, из которой запустили, успела закрыться до выбора.
             regionDelay.interval = Math.max(0, delay ?? 0);
@@ -189,14 +192,19 @@ Singleton {
         onExited: code => {
             const seconds = (Date.now() - root.startedAt) / 1000;
             root.recording = false;
-            // Видеокарта не справилась сразу — тот же кадр программно.
-            if (!root.software && seconds < 3 && code !== 0 && code !== 130) {
+            // wf-recorder и при сбое захвата выходит с кодом 0 («Failed to copy frame
+            // too many times, exiting!» — так бывает с VAAPI), поэтому сбой узнаём и по тексту.
+            const failed = (code !== 0 && code !== 130)
+                || /too many times|Failed to select output|Couldn't find requested output|Failed to detect output/.test(recorderErr.text);
+            // Видеокарта не справилась сразу — то же самое программно.
+            if (!root.software && seconds < 3 && failed) {
                 console.warn("recorder: VAAPI не сработал, повтор с libx264:", recorderErr.text.trim().split("\n").pop());
+                root.vaapiBroken = true;
                 root.software = true;
                 root.launch();
                 return;
             }
-            if (seconds < 1.5 && code !== 0 && code !== 130) {
+            if (failed && (seconds < 1.5 || code === 0)) {
                 root.lastError = recorderErr.text.trim().split("\n").pop() || `wf-recorder завершился с кодом ${code}`;
                 console.warn("recorder:", root.lastError);
                 Quickshell.execDetached(["notify-send", "-a", "KonShell", "-i", "media-record-symbolic",
