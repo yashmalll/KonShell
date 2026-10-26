@@ -1,0 +1,75 @@
+/* Цвета KonShell для GTK 4 (libadwaita).
+   Файл создаётся оболочкой — не редактируйте. Подключается из gtk.css строкой
+   @import 'konshell-colors.css';
+   Уже открытые окна перекрашиваются после перезапуска приложения. */
+
+@define-color accent_color {{primary}};
+@define-color accent_bg_color {{primary}};
+@define-color accent_fg_color {{primaryText}};
+
+@define-color window_bg_color {{background}};
+@define-color window_fg_color {{text}};
+@define-color view_bg_color {{background}};
+@define-color view_fg_color {{text}};
+
+@define-color headerbar_bg_color {{surface}};
+@define-color headerbar_fg_color {{text}};
+@define-color headerbar_backdrop_color {{background}};
+@define-color headerbar_border_color {{border}};
+
+@define-color sidebar_bg_color {{surface}};
+@define-color sidebar_fg_color {{text}};
+@define-color sidebar_backdrop_color {{background}};
+@define-color secondary_sidebar_bg_color {{background}};
+@define-color secondary_sidebar_fg_color {{text}};
+
+@define-color card_bg_color {{surface}};
+@define-color card_fg_color {{text}};
+@define-color dialog_bg_color {{popup}};
+@define-color dialog_fg_color {{text}};
+@define-color popover_bg_color {{popup}};
+@define-color popover_fg_color {{text}};
+@define-color thumbnail_bg_color {{surface}};
+@define-color thumbnail_fg_color {{text}};
+
+@define-color destructive_color {{error}};
+@define-color destructive_bg_color {{error}};
+@define-color destructive_fg_color {{errorText}};
+@define-color success_color {{success}};
+@define-color success_bg_color {{success}};
+@define-color success_fg_color {{successText}};
+@define-color warning_color {{warning}};
+@define-color warning_bg_color {{warning}};
+@define-color warning_fg_color {{warningText}};
+@define-color error_color {{error}};
+@define-color error_bg_color {{error}};
+@define-color error_fg_color {{errorText}};
+
+/* libadwaita 1.6+ читает цвета и из CSS-переменных. */
+:root {
+    --accent-color: {{primary}};
+    --accent-bg-color: {{primary}};
+    --accent-fg-color: {{primaryText}};
+    --window-bg-color: {{background}};
+    --window-fg-color: {{text}};
+    --view-bg-color: {{background}};
+    --view-fg-color: {{text}};
+    --headerbar-bg-color: {{surface}};
+    --headerbar-fg-color: {{text}};
+    --sidebar-bg-color: {{surface}};
+    --sidebar-fg-color: {{text}};
+    --card-bg-color: {{surface}};
+    --card-fg-color: {{text}};
+    --dialog-bg-color: {{popup}};
+    --dialog-fg-color: {{text}};
+    --popover-bg-color: {{popup}};
+    --popover-fg-color: {{text}};
+    --destructive-bg-color: {{error}};
+    --destructive-fg-color: {{errorText}};
+    --success-bg-color: {{success}};
+    --success-fg-color: {{successText}};
+    --warning-bg-color: {{warning}};
+    --warning-fg-color: {{warningText}};
+    --error-bg-color: {{error}};
+    --error-fg-color: {{errorText}};
+}

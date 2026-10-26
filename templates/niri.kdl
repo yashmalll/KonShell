@@ -1,0 +1,21 @@
+// Цвета KonShell для рамок окон. Файл создаётся оболочкой — не редактируйте.
+// Подключён в конце config.kdl строкой include "konshell-colors.kdl",
+// поэтому переопределяет цвета, заданные выше в основном конфиге.
+
+layout {
+    focus-ring {
+        active-color "{{primary}}"
+        inactive-color "{{outline}}"
+        urgent-color "{{error}}"
+    }
+
+    border {
+        active-color "{{primary}}"
+        inactive-color "{{border}}"
+        urgent-color "{{error}}"
+    }
+
+    insert-hint {
+        color "{{primary|alpha:0.5}}"
+    }
+}

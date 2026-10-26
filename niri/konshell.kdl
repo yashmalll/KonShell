@@ -1,0 +1,45 @@
+// KonShell для niri. install.sh делает ссылку ~/.config/niri/konshell.kdl на этот файл
+// и добавляет в конец config.kdl строку include "konshell.kdl". niri объединяет
+// подключённые файлы с основным конфигом; одинаковые клавиши здесь перекрывают
+// заданные выше в config.kdl. Свои клавиши лучше менять в config.kdl после include.
+
+// Оболочка. Конфигурация — ~/.config/quickshell/konshell (ссылка на репозиторий).
+spawn-at-startup "qs" "-c" "konshell"
+
+environment {
+    // Qt-приложения берут палитру оболочки через qt6ct (схема KonShell.conf).
+    QT_QPA_PLATFORMTHEME "qt6ct"
+}
+
+layout {
+    // Рабочие столы прозрачные: обои — один слой в заднике (правило ниже), видны
+    // сквозь столы и не дублируются под каждым столом в обзоре и при переходах.
+    background-color "transparent"
+}
+
+layer-rule {
+    match namespace="^konshell-wallpaper$"
+    place-within-backdrop true
+}
+
+// Окно «Настройки KonShell» — плавающее.
+window-rule {
+    match app-id="^org\\.quickshell$" title="^Настройки KonShell$"
+    open-floating true
+}
+
+binds {
+    Mod+Space hotkey-overlay-title="Лаунчер" { spawn "qs" "-c" "konshell" "ipc" "call" "launcher" "toggle"; }
+    Mod+Alt+V hotkey-overlay-title="История буфера обмена" { spawn "qs" "-c" "konshell" "ipc" "call" "clipboard" "toggle"; }
+    Mod+Alt+N hotkey-overlay-title="Новая заметка" { spawn "qs" "-c" "konshell" "ipc" "call" "dashboard" "note"; }
+    Mod+Shift+E hotkey-overlay-title="Выключение, перезагрузка, выход" { spawn "qs" "-c" "konshell" "ipc" "call" "session" "toggle"; }
+    Super+Alt+L hotkey-overlay-title="Заблокировать экран" { spawn "qs" "-c" "konshell" "ipc" "call" "lock" "lock"; }
+
+    // Громкость и яркость — через оболочку: она же показывает индикатор.
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "qs" "-c" "konshell" "ipc" "call" "audio" "increase"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "qs" "-c" "konshell" "ipc" "call" "audio" "decrease"; }
+    XF86AudioMute allow-when-locked=true { spawn "qs" "-c" "konshell" "ipc" "call" "audio" "toggleMute"; }
+    XF86AudioMicMute allow-when-locked=true { spawn "qs" "-c" "konshell" "ipc" "call" "audio" "toggleMicMute"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn "qs" "-c" "konshell" "ipc" "call" "brightness" "increase"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "qs" "-c" "konshell" "ipc" "call" "brightness" "decrease"; }
+}

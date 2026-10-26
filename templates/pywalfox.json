@@ -1,0 +1,27 @@
+{
+    "wallpaper": {{wallpaper|json}},
+    "alpha": "100",
+    "special": {
+        "background": "{{background}}",
+        "foreground": "{{text}}",
+        "cursor": "{{primary}}"
+    },
+    "colors": {
+        "color0": "{{background}}",
+        "color1": "{{primary}}",
+        "color2": "{{secondary}}",
+        "color3": "{{primary}}",
+        "color4": "{{term4}}",
+        "color5": "{{tertiary}}",
+        "color6": "{{term6}}",
+        "color7": "{{textMuted}}",
+        "color8": "{{surfaceVariant}}",
+        "color9": "{{term9}}",
+        "color10": "{{primary}}",
+        "color11": "{{term11}}",
+        "color12": "{{term12}}",
+        "color13": "{{tertiary}}",
+        "color14": "{{term14}}",
+        "color15": "{{text}}"
+    }
+}
