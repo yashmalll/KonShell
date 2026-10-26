@@ -44,6 +44,8 @@ var sections = [
       desc: "Где хранить заметки и чем их открывать" },
     { id: "dock", category: "desktop", name: "Док", icon: "view-app-grid-symbolic",
       desc: "Закреплённые приложения, вид и автоскрытие" },
+    { id: "sidebar", category: "desktop", name: "Боковая панель", icon: "sidebar-show-right-symbolic",
+      desc: "Заметки, скриншот и запись экрана — у края экрана" },
     { id: "launcher", category: "desktop", name: "Лаунчер", icon: "system-search-symbolic",
       desc: "Окно запуска приложений по Mod+Space: вид и порядок" },
     { id: "clipboard", category: "desktop", name: "Буфер обмена", icon: "edit-paste-symbolic",
@@ -154,6 +156,9 @@ var options = [
     // ---------- Панель ----------
     { section: "bar", group: "Вид", key: "bar.height", type: "slider", title: "Высота панели", def: 32,
       min: 24, max: 48, step: 2, unit: "px" },
+    { section: "bar", group: "Вид", key: "bar.rightClickDashboard", type: "switch", title: "Правый клик — окно часов",
+      def: true, hint: "Правый клик по свободному месту панели открывает календарь, погоду, плеер и заметки",
+      keywords: "пкм мышь календарь dashboard" },
     { section: "bar", group: "Виджеты", type: "custom", component: "barLayout", title: "Расположение виджетов",
       keywords: "зоны слева справа центр" },
     { section: "bar", group: "Трей", type: "custom", component: "trayItems", title: "Значки трея",
@@ -188,7 +193,7 @@ var options = [
 
     // ---------- Заметки ----------
     { section: "notes", group: "Файлы", key: "notes.directory", type: "text", title: "Папка заметок", def: "",
-      hint: "Пусто — ~/Documents/Notes", keywords: "markdown md" },
+      hint: "Пусто — Notes в папке «Документы» (~/Документы/Notes). Одна папка для боковой панели и окна часов", keywords: "markdown md" },
     { section: "notes", group: "Файлы", key: "notes.datePrefix", type: "switch", title: "Дата в имени файла", def: true,
       hint: "«2026-10-18 Идея.md»: по имени видно, когда записано" },
     { section: "notes", group: "Файлы", key: "notes.openCommand", type: "text", title: "Открывать в", def: "",
@@ -219,6 +224,22 @@ var options = [
       def: ["firefox", "kitty", "dev.zed.Zed"],
       hint: "Id .desktop-файлов через запятую. Проще — правый клик по значку → «Закрепить»",
       when: ["dock.enabled", true], keywords: "избранное pin" },
+
+    // ---------- Боковая панель ----------
+    { section: "sidebar", group: "Общее", key: "sidebar.enabled", type: "switch", title: "Боковая панель", def: true,
+      hint: "Заметки, скриншот и запись экрана", keywords: "sidebar заметки скриншот запись край" },
+    { section: "sidebar", group: "Общее", key: "sidebar.edge", type: "choice", title: "У края", def: "right",
+      choices: [["right", "Справа"], ["left", "Слева"], ["both", "Оба края"]], when: ["sidebar.enabled", true],
+      keywords: "сторона край" },
+    { section: "sidebar", group: "Общее", key: "sidebar.hotEdge", type: "switch", title: "Открывать у края экрана", def: true,
+      hint: "Упритесь мышью в край экрана. Иначе — только командой qs -c konshell ipc call sidebar toggle",
+      when: ["sidebar.enabled", true], keywords: "мышь горячий край" },
+    { section: "sidebar", group: "Общее", key: "sidebar.delay", type: "choice", title: "Задержка", def: 250,
+      choices: [[0, "Сразу"], [250, "0,25 с"], [500, "0,5 с"], [1000, "1 с"]],
+      hint: "Сколько держать мышь у края — чтобы панель не выезжала случайно",
+      when: ["sidebar.hotEdge", true] },
+    { section: "sidebar", group: "Вид", key: "sidebar.width", type: "slider", title: "Ширина", def: 360,
+      min: 300, max: 520, step: 20, unit: "px", when: ["sidebar.enabled", true] },
 
     // ---------- Лаунчер ----------
     { section: "launcher", group: "Вид", key: "launcher.width", type: "slider", title: "Ширина", def: 560,

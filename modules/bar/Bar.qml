@@ -65,6 +65,16 @@ Variants {
             enabled: Caffeine.active
         }
 
+        // Правый клик по панели — окно часов и календаря (bar.rightClickDashboard).
+        // Лежит под виджетами: у кого свой правый клик (уведомления, плеер, трей),
+        // тот срабатывает сам; остальные пропускают правую кнопку сюда.
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.RightButton
+            enabled: Settings.bar.rightClickDashboard
+            onClicked: Ui.dashboardOpen = !Ui.dashboardOpen
+        }
+
         Item {
             anchors.fill: parent
             anchors.leftMargin: Theme.spacing.md

@@ -5,7 +5,7 @@ import qs.widgets
 
 // Быстрая заметка в Markdown: заголовок и текст → новый .md-файл в папке заметок
 // (services/Notes.qml). Ctrl+Enter — сохранить. Ниже — последние заметки,
-// клик открывает в редакторе.
+// клик открывает окно заметки (просмотр и правка).
 Column {
     id: root
 
@@ -264,7 +264,8 @@ Column {
                     anchors.leftMargin: Theme.spacing.sm
                     anchors.rightMargin: Theme.spacing.sm
                     anchors.verticalCenter: parent.verticalCenter
-                    text: noteRow.fileBaseName
+                    text: Notes.displayName(noteRow.fileBaseName)
+                    elide: Text.ElideRight
                 }
 
                 StyledText {
@@ -284,10 +285,7 @@ Column {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        Ui.dashboardOpen = false;
-                        Notes.open(noteRow.filePath);
-                    }
+                    onClicked: Ui.openNote(noteRow.filePath)
                 }
             }
         }

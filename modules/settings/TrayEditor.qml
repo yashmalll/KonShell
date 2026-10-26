@@ -43,8 +43,7 @@ Column {
 
     StyledText {
         width: parent.width
-        text: "На панели — значок виден всегда; в трее — по кнопке-стрелке рядом с ними. "
-            + "То же меняется правым кликом по значку."
+        text: "На панели — значок виден всегда; в трее — по кнопке-стрелке рядом с ними."
         color: Theme.color.textMuted
         font.pixelSize: Theme.font.caption
         wrapMode: Text.Wrap

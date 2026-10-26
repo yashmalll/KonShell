@@ -7,7 +7,7 @@ import qs.widgets
 
 // Всплывающее окно трея: значки, не закреплённые на панели, компактной сеткой
 // без заголовка. Клик мимо закрывает окно (grabFocus). Правый клик по значку —
-// меню с «Показывать на панели».
+// меню приложения.
 PopupWindow {
     id: root
 
@@ -76,7 +76,7 @@ PopupWindow {
                     width: root.cell
                     height: root.cell
                     radius: Theme.radius.control
-                    color: icon.hovered || icon.menuOpen ? Theme.color.hover : "transparent"
+                    color: icon.hovered ? Theme.color.hover : "transparent"
 
                     Behavior on color {
                         ColorAnimation { duration: Theme.anim.fast }

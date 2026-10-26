@@ -19,6 +19,7 @@ Singleton {
         if (sessionOpen) {
             controlCenterOpen = false;
             dashboardOpen = false;
+            sidebarOpen = false;
             Notifications.centerOpen = false;
         }
     }
@@ -39,11 +40,37 @@ Singleton {
     onDashboardOpenChanged: {
         if (dashboardOpen) {
             controlCenterOpen = false;
+            sidebarOpen = false;
             Notifications.centerOpen = false;
         } else {
             noteRequested = false;
         }
     }
+
+    // Боковая панель (modules/sidebar): заметки, скриншот, запись экрана.
+    // Открывается у края экрана sidebarEdge ("left" | "right") на мониторе sidebarScreen.
+    property bool sidebarOpen: false
+    property string sidebarEdge: "right"
+    property string sidebarScreen: ""
+
+    function openSidebar(screenName, edge) {
+        sidebarScreen = screenName || "";
+        sidebarEdge = edge || sidebarEdge;
+        sidebarOpen = true;
+    }
+
+    // Окно заметки поверх всего (modules/sidebar/NoteWindow.qml): notePath — открытая
+    // заметка; пусто — новая.
+    property bool noteOpen: false
+    property string notePath: ""
+
+    function openNote(path) {
+        notePath = path || "";
+        noteOpen = true;
+        sidebarOpen = false;
+        dashboardOpen = false;
+    }
+
     // main | wifi | bluetooth | audio; при закрытии сбрасывается на main.
     property string controlCenterPage: "main"
 
@@ -74,6 +101,7 @@ Singleton {
                 return;
             root.controlCenterOpen = false;
             root.dashboardOpen = false;
+            root.sidebarOpen = false;
             Notifications.centerOpen = false;
         }
     }
@@ -87,10 +115,19 @@ Singleton {
         }
     }
 
-    onControlCenterOpenChanged: {
-        if (controlCenterOpen)
+    onSidebarOpenChanged: {
+        if (sidebarOpen) {
+            controlCenterOpen = false;
             dashboardOpen = false;
-        else
+        }
+    }
+
+    onControlCenterOpenChanged: {
+        if (controlCenterOpen) {
+            dashboardOpen = false;
+            sidebarOpen = false;
+        } else {
             controlCenterPage = "main";
+        }
     }
 }

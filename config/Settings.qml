@@ -37,6 +37,7 @@ Singleton {
     property alias media: adapter.media
     property alias lock: adapter.lock
     property alias dock: adapter.dock
+    property alias sidebar: adapter.sidebar
 
     FileView {
         id: file
@@ -61,6 +62,8 @@ Singleton {
                 property list<string> left: ["workspaces", "windowTitle"]
                 property list<string> center: ["clock"]
                 property list<string> right: ["tray", "keyboard", "status", "notifications"]
+                // Правый клик по панели открывает окно часов и календаря.
+                property bool rightClickDashboard: true
             }
 
             property JsonObject clock: JsonObject {
@@ -119,7 +122,7 @@ Singleton {
             }
 
             property JsonObject notes: JsonObject {
-                // Пусто: ~/Documents/Notes.
+                // Пусто: «Документы/Notes» (папка документов из ~/.config/user-dirs.dirs).
                 property string directory: ""
                 // Дата в начале имени файла: «2026-10-18 Идея.md».
                 property bool datePrefix: true
@@ -173,7 +176,6 @@ Singleton {
 
             property JsonObject tray: JsonObject {
                 property int iconSize: 18
-                property int menuWidth: 260
                 // Скрывать значки в статусе Passive (приложение просит их не показывать).
                 property bool hidePassive: true
                 // Id значков, которые не показывать. nm-applet дублирует индикатор сети,
@@ -276,6 +278,18 @@ Singleton {
                 property bool manage: true
                 property string theme: "Adwaita"
                 property int size: 24
+            }
+
+            // Боковая панель: заметки, скриншот, запись экрана (modules/sidebar).
+            property JsonObject sidebar: JsonObject {
+                property bool enabled: true
+                // У какого края: right | left | both (открывается у того, в который упёрлись).
+                property string edge: "right"
+                // Открывать, когда мышь упирается в край экрана; иначе — только по IPC.
+                property bool hotEdge: true
+                // Сколько держать мышь у края, мс.
+                property int delay: 250
+                property int width: 360
             }
 
             property JsonObject shell: JsonObject {

@@ -263,43 +263,6 @@ Column {
             onClicked: Battery.cycleProfile()
         }
 
-        // Запись: клик — весь экран, стрелка — выбрать область; во время записи клик — стоп.
-        // Пауза перед стартом — центр управления успевает закрыться и не попадает в кадр.
-        Tile {
-            width: tiles.tileWidth
-            icon: "media-record-symbolic"
-            title: "Запись экрана"
-            subtitle: ScreenRecorder.recording ? `Идёт ${ScreenRecorder.format(ScreenRecorder.elapsed)} · стоп`
-                : ScreenRecorder.available ? "Весь экран" : "Нужны wf-recorder и slurp"
-            active: ScreenRecorder.recording
-            enabled: ScreenRecorder.available
-            hasDetails: ScreenRecorder.available && !ScreenRecorder.recording
-            onClicked: {
-                if (ScreenRecorder.recording) {
-                    ScreenRecorder.stop();
-                } else {
-                    Ui.controlCenterOpen = false;
-                    ScreenRecorder.start("screen", 400);
-                }
-            }
-            onDetailsClicked: {
-                Ui.controlCenterOpen = false;
-                ScreenRecorder.start("region", 400);
-            }
-        }
-
-        // Встроенный инструмент снимков niri: область, окно или экран, сохраняет и копирует.
-        Tile {
-            width: tiles.tileWidth
-            icon: "applets-screenshooter-symbolic"
-            title: "Скриншот"
-            subtitle: "Область или окно"
-            onClicked: {
-                Ui.controlCenterOpen = false;
-                ScreenRecorder.screenshot(350);
-            }
-        }
-
         Tile {
             width: tiles.tileWidth
             icon: "preferences-desktop-screensaver-symbolic"

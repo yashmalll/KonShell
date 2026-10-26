@@ -21,6 +21,7 @@ import qs.modules.osd
 import qs.modules.polkit
 import qs.modules.session
 import qs.modules.settings
+import qs.modules.sidebar
 
 ShellRoot {
     Backdrop {}
@@ -33,6 +34,8 @@ ShellRoot {
     Popups {}
     Center {}
     ControlCenter {}
+    Sidebar {}
+    NoteWindow {}
     Osd {}
     LockScreen {}
     SettingsWindow {}

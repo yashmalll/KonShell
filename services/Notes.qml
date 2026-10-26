@@ -7,17 +7,34 @@ import Quickshell.Io
 import qs.config
 
 // Быстрые заметки в Markdown: каждая — отдельный .md-файл в папке notes.directory
-// (по умолчанию ~/Documents/Notes). Оболочка их только создаёт и показывает
-// последние; открываются они в редакторе (notes.openCommand или xdg-open).
+// (по умолчанию «Документы/Notes», например ~/Документы/Notes). Оболочка их создаёт, показывает, правит
+// (окно заметки modules/sidebar/NoteWindow.qml) и удаляет в корзину; открыть во
+// внешнем редакторе — notes.openCommand или xdg-open.
 Singleton {
     id: root
 
     readonly property string home: Quickshell.env("HOME")
+    // Папка «Документы» пользователя — из ~/.config/user-dirs.dirs (XDG_DOCUMENTS_DIR):
+    // у русской системы это ~/Документы, а не ~/Documents.
+    readonly property string documents: {
+        const match = userDirs.text().match(/^XDG_DOCUMENTS_DIR="(.*)"\s*$/m);
+        const dir = match ? match[1].replace(/^\$HOME/, home) : "";
+        return dir !== "" && dir !== home ? dir : home + "/Documents";
+    }
+    // Одна папка для всех заметок: боковой панели, панели под часами и окна заметки.
     readonly property string directory: {
         const dir = Settings.notes.directory.trim();
         if (dir === "")
-            return home + "/Documents/Notes";
+            return documents + "/Notes";
         return dir.startsWith("~/") ? home + dir.slice(1) : dir;
+    }
+
+    FileView {
+        id: userDirs
+
+        path: (Quickshell.env("XDG_CONFIG_HOME") || root.home + "/.config") + "/user-dirs.dirs"
+        blockLoading: true
+        printErrors: false
     }
 
     // Последние заметки, новые первыми: fileName, fileBaseName, filePath, fileModified.
@@ -38,6 +55,28 @@ Singleton {
     property string lastError: ""
 
     signal saved(string path)
+
+    // Черновик новой заметки: окно заметки закрыли, не сохранив, — текст не пропадает.
+    property string draftTitle: ""
+    property string draftBody: ""
+
+    // Имя для списка: без даты в начале («2026-10-18 Идея» → «Идея»).
+    function displayName(baseName) {
+        return baseName.replace(/^\d{4}-\d{2}-\d{2}\s+/, "") || baseName;
+    }
+
+    // Перезаписать существующую заметку.
+    function write(path, text) {
+        lastError = "";
+        saving = true;
+        writer.command = ["sh", "-c", 'printf "%s" "$2" > "$1" && printf "%s" "$1"', "sh", path, text];
+        writer.running = true;
+    }
+
+    // В корзину (gio trash), а если её нет — удалить.
+    function remove(path) {
+        Quickshell.execDetached(["sh", "-c", 'gio trash -- "$1" 2>/dev/null || rm -f -- "$1"', "sh", path]);
+    }
 
     // Имя файла из заголовка: без символов, запрещённых в именах, не длиннее 60 знаков.
     function fileTitle(text) {
