@@ -8,7 +8,7 @@ import qs.services
 
 // Экран блокировки. Блокирует сессию по протоколу ext-session-lock: если оболочка
 // упадёт, niri оставит экран заблокированным. Пароль проверяется через PAM
-// (стек swaylock или login), PIN — оболочкой (хэш в ~/.local/state/konshell/lock-pin).
+// (стек swaylock или login), PIN — оболочкой (хэш в user/state/lock-pin).
 //
 //   qs -c konshell ipc call lock lock
 //   qs -c konshell ipc call lock preview    — тот же экран в обычном окне, Esc или closePreview закрывает

@@ -11,7 +11,7 @@ import qs.config
 // niri указана неустановленная тема.
 //
 // При cursor.manage оболочка пишет:
-//   ~/.config/niri/konshell-cursor.kdl — блок cursor (подключён в конце config.kdl,
+//   user/cursor.kdl — блок cursor (подключён из user/niri.kdl в конце config.kdl,
 //     переопределяет заданный выше); niri передаёт XCURSOR_THEME и XCURSOR_SIZE
 //     запускаемым приложениям и рисует курсор над окнами и оболочкой;
 //   gsettings org.gnome.desktop.interface cursor-theme и cursor-size — для GTK;
@@ -21,7 +21,6 @@ Singleton {
     id: root
 
     readonly property string home: Quickshell.env("HOME")
-    readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || home + "/.config"
     readonly property string dataHome: Quickshell.env("XDG_DATA_HOME") || home + "/.local/share"
 
     // Установленные темы курсора: каталоги с подкаталогом cursors.
@@ -88,7 +87,7 @@ Singleton {
     FileView {
         id: niriFile
 
-        path: root.configHome + "/niri/konshell-cursor.kdl"
+        path: Paths.root + "/cursor.kdl"
         blockLoading: true
         printErrors: false
         atomicWrites: true

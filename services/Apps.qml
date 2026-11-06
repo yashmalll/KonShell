@@ -76,7 +76,7 @@ Singleton {
     FileView {
         id: usageFile
 
-        path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/konshell/launcher-usage.json"
+        path: Paths.state + "/launcher-usage.json"
         printErrors: false
         blockLoading: true
         atomicWrites: true

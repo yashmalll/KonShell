@@ -4,14 +4,12 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Пользовательские настройки в ~/.config/konshell/settings.json.
+// Пользовательские настройки в <папка оболочки>/user/settings.json (config/Paths.qml).
 // Если файла нет, он создаётся со значениями по умолчанию.
 Singleton {
     id: root
 
-    readonly property string settingsPath:
-        (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config")
-        + "/konshell/settings.json"
+    readonly property string settingsPath: Paths.settings
 
     property alias bar: adapter.bar
     property alias clock: adapter.clock
@@ -39,6 +37,15 @@ Singleton {
     property alias dock: adapter.dock
     property alias sidebar: adapter.sidebar
 
+    Timer {
+        id: firstWriteRetry
+
+        property int attempts: 0
+
+        interval: 500
+        onTriggered: file.writeAdapter()
+    }
+
     FileView {
         id: file
 
@@ -46,9 +53,17 @@ Singleton {
         watchChanges: true
         onFileChanged: reload()
         onAdapterUpdated: writeAdapter()
+        // Файла нет — создать со значениями по умолчанию. Папку user/ при первом
+        // запуске создаёт Paths чуть позже — если запись не удалась, повторить.
         onLoadFailed: error => {
             if (error === FileViewError.FileNotFound)
                 writeAdapter();
+        }
+        onSaveFailed: {
+            if (firstWriteRetry.attempts++ < 5)
+                firstWriteRetry.start();
+            else
+                console.warn("settings: не удалось записать", root.settingsPath);
         }
 
         JsonAdapter {
@@ -137,7 +152,7 @@ Singleton {
                 property int maxVisible: 8
                 property bool showIcons: true
                 property bool showDescriptions: true
-                // Часто запускаемые — выше; счётчики в ~/.local/state/konshell/launcher-usage.json.
+                // Часто запускаемые — выше; счётчики в user/state/launcher-usage.json.
                 property bool sortByUsage: true
             }
 

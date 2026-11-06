@@ -8,16 +8,17 @@ import "../config/color.js" as ColorUtil
 
 // Перекраска приложений под палитру оболочки: GTK, Qt (qt6ct), kitty, niri, Firefox (Pywalfox), Zed.
 // Для каждой включённой цели шаблон из templates/ заполняется токенами текущего
-// режима и записывается в отдельный файл цветов, который приложение подключает
-// у себя (include / @import). Основные конфиги приложений оболочка не трогает:
-// строки подключения добавляет scripts/install-theme-hooks.sh.
+// режима и записывается в user/colors/ (config/Paths.qml). Приложения подключают
+// эти файлы по абсолютному пути (include, @import, путь к схеме); Zed и Pywalfox
+// читают только из своих папок — там ссылки на файлы из user/colors/. Всё это
+// ставит scripts/install-theme-hooks.sh; основные конфиги приложений оболочка не трогает.
 //
 // Файл перезаписывается и приложение перезагружается, только если содержимое изменилось.
 Singleton {
     id: root
 
     readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config"
-    readonly property string cacheHome: Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache"
+    readonly property string colors: Paths.colors
 
     // id — для настройки theme.exports; reload — команда перечитать цвета (необязательна).
     readonly property var targets: [
@@ -26,7 +27,7 @@ Singleton {
             id: "gtk4",
             setting: "gtk",
             template: "gtk4.css",
-            outputs: [configHome + "/gtk-4.0/konshell-colors.css"],
+            outputs: [colors + "/gtk4.css"],
             reload: []
         },
         {
@@ -34,47 +35,50 @@ Singleton {
             id: "gtk3",
             setting: "gtk",
             template: "gtk3.css",
-            outputs: [configHome + "/gtk-3.0/konshell-colors.css"],
+            outputs: [colors + "/gtk3.css"],
             reload: []
         },
         {
             id: "kitty",
             template: "kitty.conf",
-            outputs: [configHome + "/kitty/konshell-colors.conf"],
+            outputs: [colors + "/kitty.conf"],
             // SIGUSR1 — kitty перечитывает конфиг во всех окнах.
             reload: ["pkill", "-USR1", "-x", "kitty"]
         },
         {
             id: "niri",
             template: "niri.kdl",
-            outputs: [configHome + "/niri/konshell-colors.kdl"],
+            outputs: [colors + "/niri.kdl"],
             reload: ["niri", "msg", "action", "load-config-file"]
         },
         {
-            // Firefox через расширение Pywalfox: оно читает colors.json в формате pywal.
+            // Firefox через расширение Pywalfox: оно читает ~/.cache/wal/colors.json (ссылка
+            // на этот файл) в формате pywal.
             // Цвета берёт по номерам: тёмный шаблон — фон color0, акценты color10 и color13,
             // текст color15; светлый — акценты color3 и color5. На этих местах — акценты
             // оболочки, а не цвета терминала (иначе Firefox был бы зелёно-розовым).
             id: "pywalfox",
             template: "pywalfox.json",
-            outputs: [cacheHome + "/wal/colors.json"],
+            outputs: [colors + "/pywalfox.json"],
             reload: ["pywalfox", "update"]
         },
         {
-            // Qt-приложения через qt6ct: схема цветов KonShell.conf. Подключение
-            // (QT_QPA_PLATFORMTHEME=qt6ct, custom_palette в qt6ct.conf) — install-theme-hooks.sh.
+            // Qt-приложения через qt6ct: схема цветов — этот файл (color_scheme_path в
+            // qt6ct.conf, QT_QPA_PLATFORMTHEME=qt6ct — в niri.kdl оболочки), — install-theme-hooks.sh.
             // qt6ct следит за qt6ct.conf: изменённое время файла — сигнал перечитать палитру.
             id: "qt",
             template: "qt6ct.conf",
-            outputs: [configHome + "/qt6ct/colors/KonShell.conf"],
+            outputs: [colors + "/qt6ct.conf"],
             reload: ["touch", configHome + "/qt6ct/qt6ct.conf"]
         },
         {
             // Обе темы (KonShell Dark и Light) в одном файле: Zed сам выбирает по системному режиму.
             id: "zed",
             template: "zed.json",
-            outputs: [configHome + "/zed/themes/konshell.json"],
-            reload: []
+            outputs: [colors + "/zed.json"],
+            // Zed следит только за своей папкой тем: там ссылка на этот файл. Новое время
+            // изменения ссылки — сигнал перечитать тему.
+            reload: ["touch", "-h", configHome + "/zed/themes/konshell.json"]
         }
     ]
 

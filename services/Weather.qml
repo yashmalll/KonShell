@@ -8,7 +8,7 @@ import qs.config
 // Погода с Open-Meteo (бесплатно, без ключа): текущая и на 5 дней для города
 // из настроек (weather.city). Город переводится в координаты их же геокодером.
 // Обновление — раз в weather.refreshMinutes; последний ответ хранится в
-// ~/.cache/konshell/weather.json, поэтому после запуска погода видна сразу.
+// user/cache/weather.json, поэтому после запуска погода видна сразу.
 Singleton {
     id: root
 
@@ -216,7 +216,7 @@ Singleton {
     FileView {
         id: cache
 
-        path: (Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache") + "/konshell/weather.json"
+        path: Paths.cache + "/weather.json"
         printErrors: false
         atomicWrites: true
         blockLoading: true

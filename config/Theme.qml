@@ -14,8 +14,7 @@ import "fallback-palette.js" as Fallback
 Singleton {
     id: root
 
-    readonly property string stateDir:
-        (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/konshell"
+    readonly property string stateDir: Paths.state
     readonly property string palettePath: stateDir + "/palette.json"
 
     readonly property string mode: Settings.theme.mode === "light" ? "light" : "dark"

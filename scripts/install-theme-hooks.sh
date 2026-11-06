@@ -1,23 +1,32 @@
 #!/bin/sh
-# Подключает файлы цветов KonShell к приложениям: kitty, GTK 3/4, niri, Zed, Qt (qt6ct),
-# и файл курсора к niri.
-# Вызывается из install.sh; можно запускать и отдельно.
+# Подключает цвета KonShell к приложениям. Сами файлы цветов пишет оболочка в
+# user/colors/ (services/ThemeExport.qml); здесь — только подключение:
+#   kitty     include <user>/colors/kitty.conf          в конце kitty.conf
+#   GTK 3/4   @import url("file://<user>/colors/gtk*.css") в начале gtk.css
+#   Qt        color_scheme_path = <user>/colors/qt6ct.conf  в qt6ct.conf
+#   Zed       ссылка themes/konshell.json → <user>/colors/zed.json, темы KonShell в settings.json
+#   Firefox   ссылка ~/.cache/wal/colors.json → <user>/colors/pywalfox.json (для Pywalfox)
+#   niri      цвета подключает user/niri.kdl (install.sh)
 #
-#   install-theme-hooks.sh              добавить строки подключения
-#   install-theme-hooks.sh --uninstall  убрать их
+#   install-theme-hooks.sh               подключить
+#   install-theme-hooks.sh --uninstall   убрать
 #
-# Повторный запуск ничего не дублирует. Перед первой правкой файла рядом
-# сохраняется копия <файл>.konshell-bak. Сами файлы цветов пишет оболочка
-# (services/ThemeExport.qml); здесь, если их ещё нет, создаются пустые —
-# иначе niri не загрузил бы конфиг с include на несуществующий файл.
+# Повторный запуск ничего не дублирует. Перед первой правкой файла рядом сохраняется
+# копия <файл>.konshell-bak. Подключения прежних версий (konshell-colors.* в папках
+# программ) убираются в обоих режимах. Вызывается из install.sh.
 
 set -eu
 config=${XDG_CONFIG_HOME:-$HOME/.config}
+cache=${XDG_CACHE_HOME:-$HOME/.cache}
+shell_dir=$(cd "$(dirname "$0")/.." && pwd)
+user=${KONSHELL_HOME:-$shell_dir/user}
+user=${user%/}
+colors="$user/colors"
 mode=${1:-install}
 marker="KonShell: цвета под обои"
 
 backup() {
-    [ -e "$1" ] && [ ! -e "$1.konshell-bak" ] && cp -p "$1" "$1.konshell-bak"
+    [ -e "$1" ] && [ ! -L "$1" ] && [ ! -e "$1.konshell-bak" ] && cp -p "$1" "$1.konshell-bak"
     return 0
 }
 
@@ -25,7 +34,7 @@ backup() {
 # обрезаются, а файл, в котором больше ничего не осталось, удаляется.
 unhook() {
     file=$1 line=$2
-    [ -e "$file" ] && grep -qF "$line" "$file" || return 0
+    [ -e "$file" ] && grep -qF -- "$line" "$file" || return 0
     grep -vF -e "$line" -e "$marker" "$file" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > "$file.tmp" || true
     if [ -s "$file.tmp" ]; then
         mv "$file.tmp" "$file"
@@ -35,7 +44,7 @@ unhook() {
     echo "убрано из $file"
 }
 
-# append_hook <файл> <строка> — дописать в конец (для kitty и niri: последнее определение побеждает).
+# append_hook <файл> <строка> <знак комментария> — в конец (последнее определение побеждает).
 append_hook() {
     file=$1 line=$2
     if [ "$mode" = --uninstall ]; then
@@ -43,11 +52,11 @@ append_hook() {
         return 0
     fi
     [ -e "$file" ] || { echo "нет $file — пропускаю"; return 0; }
-    if grep -qF "$line" "$file"; then
+    if grep -qF -- "$line" "$file"; then
         echo "уже подключено: $file"
     else
         backup "$file"
-        printf '\n// %s\n%s\n' "$marker" "$line" | sed "s|^// |$3 |" >> "$file"
+        printf '\n%s %s\n%s\n' "$3" "$marker" "$line" >> "$file"
         echo "подключено: $file"
     fi
 }
@@ -60,7 +69,7 @@ prepend_hook() {
         return 0
     fi
     mkdir -p "$(dirname "$file")"
-    if [ -e "$file" ] && grep -qF "$line" "$file"; then
+    if [ -e "$file" ] && grep -qF -- "$line" "$file"; then
         echo "уже подключено: $file"
         return 0
     fi
@@ -70,29 +79,52 @@ prepend_hook() {
     echo "подключено: $file"
 }
 
+# link <ссылка> <цель> — ссылка в папке программы на файл из user/colors.
+link() {
+    if [ "$mode" = --uninstall ]; then
+        [ -L "$1" ] && rm -f "$1" && echo "убрана ссылка $1"
+        return 0
+    fi
+    mkdir -p "$(dirname "$1")"
+    [ -e "$1" ] && [ ! -L "$1" ] && rm -f "$1"
+    ln -sfn "$2" "$1"
+    echo "ссылка: $1 → $2"
+}
+
 ensure_file() {
     [ "$mode" = --uninstall ] && return 0
     mkdir -p "$(dirname "$1")"
     [ -e "$1" ] || : > "$1"
 }
 
-ensure_file "$config/niri/konshell-colors.kdl"
-ensure_file "$config/niri/konshell-cursor.kdl"
-ensure_file "$config/kitty/konshell-colors.conf"
-ensure_file "$config/gtk-3.0/konshell-colors.css"
-ensure_file "$config/gtk-4.0/konshell-colors.css"
+# --- Прежние версии: файлы цветов лежали в папках программ ------------------------
+mode_saved=$mode
+mode=--uninstall
+unhook "$config/kitty/kitty.conf" 'include konshell-colors.conf'
+unhook "$config/gtk-3.0/gtk.css" "@import 'konshell-colors.css';"
+unhook "$config/gtk-4.0/gtk.css" "@import 'konshell-colors.css';"
+mode=$mode_saved
+rm -f "$config/kitty/konshell-colors.conf" "$config/gtk-3.0/konshell-colors.css" "$config/gtk-4.0/konshell-colors.css" \
+      "$config/qt6ct/colors/KonShell.conf"
 
-append_hook "$config/niri/config.kdl" 'include "konshell-colors.kdl"' "//"
-append_hook "$config/niri/config.kdl" 'include "konshell-cursor.kdl"' "//"
-append_hook "$config/kitty/kitty.conf" 'include konshell-colors.conf' "#"
-prepend_hook "$config/gtk-3.0/gtk.css" "@import 'konshell-colors.css';"
-prepend_hook "$config/gtk-4.0/gtk.css" "@import 'konshell-colors.css';"
+# --- Подключение ------------------------------------------------------------------
+mkdir -p "$colors"
+for f in kitty.conf gtk3.css gtk4.css niri.kdl qt6ct.conf zed.json pywalfox.json; do
+    ensure_file "$colors/$f"
+done
 
-# Zed: выбрать темы KonShell Dark/Light (файл темы пишет оболочка). Меняются только
-# значения "light" и "dark" в блоке "theme"; прежние названия сохраняются рядом
-# и возвращаются при --uninstall. settings.json у Zed — JSON с запятыми в конце, поэтому правка точечная.
+append_hook "$config/kitty/kitty.conf" "include $colors/kitty.conf" "#"
+prepend_hook "$config/gtk-3.0/gtk.css" "@import url(\"file://$colors/gtk3.css\");"
+prepend_hook "$config/gtk-4.0/gtk.css" "@import url(\"file://$colors/gtk4.css\");"
+[ -d "$config/zed" ] && link "$config/zed/themes/konshell.json" "$colors/zed.json"
+link "$cache/wal/colors.json" "$colors/pywalfox.json"
+
+# Zed: выбрать темы KonShell Dark/Light. Меняются только значения "light" и "dark"
+# в блоке "theme"; прежние названия — в user/state/, возвращаются при --uninstall.
 zed_settings="$config/zed/settings.json"
-zed_previous="$config/zed/.konshell-previous-themes"
+zed_previous="$user/state/zed-previous-themes.json"
+# прежние версии хранили этот файл в папке Zed
+[ -e "$config/zed/.konshell-previous-themes" ] && { mkdir -p "$user/state"; mv "$config/zed/.konshell-previous-themes" "$zed_previous"; }
 if [ -e "$zed_settings" ] && command -v python3 >/dev/null 2>&1; then
     [ "$mode" != --uninstall ] && backup "$zed_settings"
     python3 -I - "$zed_settings" "$zed_previous" "$mode" <<'PY'
@@ -123,21 +155,16 @@ print(("убрано из " if mode == "--uninstall" else "подключено:
 PY
 fi
 
-# Qt: qt6ct берёт палитру из схемы KonShell.conf (её пишет оболочка), а Qt-приложения
-# включают qt6ct переменной QT_QPA_PLATFORMTHEME (environment в niri/konshell.kdl).
-# Прежние значения qt6ct.conf сохраняются рядом и возвращаются при --uninstall.
+# Qt: qt6ct берёт палитру из user/colors/qt6ct.conf; QT_QPA_PLATFORMTHEME=qt6ct задаёт
+# user/niri.kdl. Прежние значения qt6ct.conf — в user/state/, возвращаются при --uninstall.
 qt_conf="$config/qt6ct/qt6ct.conf"
-qt_previous="$config/qt6ct/.konshell-previous"
-if command -v python3 >/dev/null 2>&1; then
-    if [ "$mode" != --uninstall ]; then
-        ensure_file "$config/qt6ct/colors/KonShell.conf"
-        backup "$qt_conf"
-    fi
-    python3 -I - "$qt_conf" "$qt_previous" "$config/qt6ct/colors/KonShell.conf" "$mode" <<'PY'
+qt_previous="$user/state/qt6ct-previous.json"
+[ -e "$config/qt6ct/.konshell-previous" ] && { mkdir -p "$user/state"; mv "$config/qt6ct/.konshell-previous" "$qt_previous"; }
+if command -v python3 >/dev/null 2>&1 && { [ "$mode" != --uninstall ] || [ -e "$qt_previous" ]; }; then
+    [ "$mode" != --uninstall ] && { mkdir -p "$config/qt6ct"; backup "$qt_conf"; }
+    python3 -I - "$qt_conf" "$qt_previous" "$colors/qt6ct.conf" "$mode" <<'PY'
 import configparser, json, os, sys
 path, previous_path, scheme, mode = sys.argv[1:5]
-if mode == "--uninstall" and not os.path.exists(previous_path):
-    sys.exit(0)
 ini = configparser.RawConfigParser(strict=False)
 ini.optionxform = str
 if os.path.exists(path):
@@ -146,7 +173,6 @@ if not ini.has_section("Appearance"):
     ini.add_section("Appearance")
 app = ini["Appearance"]
 wanted = {"custom_palette": "true", "color_scheme_path": scheme}
-# Стиль и значки — только если пользователь их не выбирал.
 for key, value in (("style", "Fusion"), ("icon_theme", "Adwaita")):
     if key not in app:
         wanted[key] = value
@@ -163,28 +189,13 @@ else:
     if all(app.get(k) == v for k, v in wanted.items() if k in ("custom_palette", "color_scheme_path")):
         print("уже подключено: " + path)
         sys.exit(0)
-    json.dump({k: app.get(k) for k in wanted}, open(previous_path, "w"))
+    # Прежние значения — только при первом подключении: смена пути к схеме их не трогает.
+    if not os.path.exists(previous_path):
+        json.dump({k: app.get(k) for k in wanted}, open(previous_path, "w"))
     for key, value in wanted.items():
         app[key] = value
 with open(path, "w", encoding="utf-8") as f:
     ini.write(f, space_around_delimiters=False)
 print(("убрано из " if mode == "--uninstall" else "подключено: ") + path)
 PY
-
-    # Переменную QT_QPA_PLATFORMTHEME для приложений из niri задаёт niri/konshell.kdl.
-    # Прежние версии вставляли её в config.kdl с пометкой KonShell — убираем.
-    niri_conf="$config/niri/config.kdl"
-    [ -e "$niri_conf" ] && python3 -I - "$niri_conf" "$marker" <<'PY'
-import re, sys
-path, marker = sys.argv[1:3]
-text = open(path, encoding="utf-8").read()
-new = re.sub(r'^[ \t]*QT_QPA_PLATFORMTHEME "qt6ct"\s*// ' + re.escape(marker) + r'\n', "", text, flags=re.M)
-if new != text:
-    open(path, "w", encoding="utf-8").write(new)
-    print("убрана старая строка QT_QPA_PLATFORMTHEME из " + path)
-PY
-fi
-
-if [ "$mode" != --uninstall ] && command -v niri >/dev/null 2>&1; then
-    niri validate >/dev/null 2>&1 && echo "конфиг niri в порядке" || echo "ВНИМАНИЕ: niri validate сообщает об ошибке" >&2
 fi

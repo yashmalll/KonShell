@@ -1,17 +1,19 @@
 # KonShell — как устроено
 
 Подробности для тех, кто хочет разобраться в коде или поменять поведение: модули, сервисы, IPC, решения и замеры.
+
+Все файлы KonShell — в папке оболочки: код и `user/` (настройки, состояние, кэш, цвета для приложений; `config/Paths.qml`, переносится переменной `KONSHELL_HOME`). Команда `konshell` (её ставит `install.sh` в `~/.local/bin`) — то же, что `qs -p <папка оболочки>`.
 Установка и обзор возможностей — в [README](../README.md).
 
 ## Структура
 
-- `config/`: синглтоны `Theme` (токены из `~/.local/state/konshell/palette.json`) и `Settings` (`~/.config/konshell/settings.json`); `color.js` — сборка токенов и проверка контраста; `fallback-palette.js` — резервная палитра
+- `config/`: синглтоны `Theme` (токены из `user/state/palette.json`) и `Settings` (`user/settings.json`); `color.js` — сборка токенов и проверка контраста; `fallback-palette.js` — резервная палитра
 - `scripts/generate-palette.sh`: запуск matugen с кэшем и обходом через ffmpeg
 - `install.sh`: установка и удаление (пакеты, ссылки, niri, перекраска приложений)
 - `niri/konshell.kdl`: автозапуск, клавиши и правила для niri (подключается к config.kdl через include)
 - `scripts/install-theme-hooks.sh`: подключение файлов цветов к kitty, niri, GTK, Zed и Qt
 - `services/ThemeExport.qml`, `templates/`: перекраска приложений под палитру
-- `scripts/make-thumbnails.sh`: миниатюры обоев в `~/.cache/konshell/thumbnails` (один раз, потом только новые)
+- `scripts/make-thumbnails.sh`: миниатюры обоев в `user/cache/thumbnails` (один раз, потом только новые)
 - `tools/check-palette.js`: проверка палитры по WCAG вне оболочки
 - `services/`: данные, например `Niri` (состояние и действия через IPC niri); `Cursor` — единый курсор для niri, GTK и XWayland
 - `widgets/`: переиспользуемые элементы отображения
@@ -20,36 +22,36 @@
 ## IPC
 
 ```sh
-qs -c konshell ipc show                              # все цели и функции
-qs -c konshell ipc call launcher toggle              # лаунчер
-qs -c konshell ipc call notifications toggleCenter   # история уведомлений
-qs -c konshell ipc call notifications toggleDnd      # «не беспокоить»
-qs -c konshell ipc call notifications clear          # очистить историю
-qs -c konshell ipc call audio increase|decrease|toggleMute|toggleMicMute
-qs -c konshell ipc call brightness increase|decrease
-qs -c konshell ipc call controlCenter toggle
-qs -c konshell ipc call controlCenter open wifi|bluetooth|audio
-qs -c konshell ipc call settings open appearance|interface|bar|clock|notes|dock|…   # id разделов — config/settings-schema.js
-qs -c konshell ipc call dashboard toggle             # календарь, плеер, заметки (как клик по часам)
-qs -c konshell ipc call dashboard note               # сразу в поле новой заметки
-qs -c konshell ipc call sidebar toggle               # боковая панель: заметки, скриншот, запись
-qs -c konshell ipc call sidebar note                 # окно новой заметки
-qs -c konshell ipc call system stats                 # процессор, память, температура, диск (JSON)
-qs -c konshell ipc call system toggleCaffeine        # «Не засыпать» вкл/выкл
-qs -c konshell ipc call clipboard toggle             # история буфера обмена
-qs -c konshell ipc call recorder toggle|region|stop   # запись экрана: весь экран, область, стоп
-qs -c konshell ipc call recorder screenshot          # инструмент снимков niri
-qs -c konshell ipc call session toggle               # меню выключения
-qs -c konshell ipc call session request poweroff     # lock|suspend|logout|reboot|poweroff, с отсчётом
-qs -c konshell ipc call dock toggle                  # показать или спрятать док
-qs -c konshell ipc call dock pin|unpin <id .desktop>  # закрепить, открепить
-qs -c konshell ipc call wallpaper set ~/Pictures/Wallpapers/картинка.jpg
-qs -c konshell ipc call wallpaper next|prev|get|rescan
-qs -c konshell ipc call theme status                 # диагностика палитры
-qs -c konshell ipc call shell memory                 # память оболочки: RSS, PSS, своя (МБ)
-qs -c konshell ipc call theme toggleMode|regenerate
-qs -c konshell ipc call theme setMode light|dark
-qs -c konshell ipc call theme setScheme vibrant
+konshell ipc show                              # все цели и функции
+konshell ipc call launcher toggle              # лаунчер
+konshell ipc call notifications toggleCenter   # история уведомлений
+konshell ipc call notifications toggleDnd      # «не беспокоить»
+konshell ipc call notifications clear          # очистить историю
+konshell ipc call audio increase|decrease|toggleMute|toggleMicMute
+konshell ipc call brightness increase|decrease
+konshell ipc call controlCenter toggle
+konshell ipc call controlCenter open wifi|bluetooth|audio
+konshell ipc call settings open appearance|interface|bar|clock|notes|dock|…   # id разделов — config/settings-schema.js
+konshell ipc call dashboard toggle             # календарь, плеер, заметки (как клик по часам)
+konshell ipc call dashboard note               # сразу в поле новой заметки
+konshell ipc call sidebar toggle               # боковая панель: заметки, скриншот, запись
+konshell ipc call sidebar note                 # окно новой заметки
+konshell ipc call system stats                 # процессор, память, температура, диск (JSON)
+konshell ipc call system toggleCaffeine        # «Не засыпать» вкл/выкл
+konshell ipc call clipboard toggle             # история буфера обмена
+konshell ipc call recorder toggle|region|stop   # запись экрана: весь экран, область, стоп
+konshell ipc call recorder screenshot          # инструмент снимков niri
+konshell ipc call session toggle               # меню выключения
+konshell ipc call session request poweroff     # lock|suspend|logout|reboot|poweroff, с отсчётом
+konshell ipc call dock toggle                  # показать или спрятать док
+konshell ipc call dock pin|unpin <id .desktop>  # закрепить, открепить
+konshell ipc call wallpaper set ~/Pictures/Wallpapers/картинка.jpg
+konshell ipc call wallpaper next|prev|get|rescan
+konshell ipc call theme status                 # диагностика палитры
+konshell ipc call shell memory                 # память оболочки: RSS, PSS, своя (МБ)
+konshell ipc call theme toggleMode|regenerate
+konshell ipc call theme setMode light|dark
+konshell ipc call theme setScheme vibrant
 ```
 
 ## Монитор системы и «Не засыпать»
@@ -79,7 +81,7 @@ qs -c konshell ipc call theme setScheme vibrant
 
 - В панели под часами — сейчас (значок, температура, описание, ощущается как, ветер, влажность) и на 5 дней (максимум, минимум, вероятность осадков от 30 %).
 - Виджет для панели «Погода» (`weather`) — значок и температура, добавляется в «Панель» → «Расположение виджетов»; клик открывает прогноз.
-- Последний ответ хранится в `~/.cache/konshell/weather.json`: после запуска погода видна сразу, запрос — только если данные устарели. Пока погода нигде не показывалась (панель под часами не открывали, виджета нет), запросов нет; после первого показа — по расписанию до конца сеанса.
+- Последний ответ хранится в `user/cache/weather.json`: после запуска погода видна сразу, запрос — только если данные устарели. Пока погода нигде не показывалась (панель под часами не открывали, виджета нет), запросов нет; после первого показа — по расписанию до конца сеанса.
 
 ## Сеть в панели под часами
 
@@ -94,9 +96,9 @@ qs -c konshell ipc call theme setScheme vibrant
 `modules/sidebar/` — панель у края экрана: заметки и снимок или запись экрана. Выезжает, когда мышь упирается в край монитора и задерживается там (`sidebar.delay`, по умолчанию 0,25 с): край — правый, левый или оба (`sidebar.edge`). Для этого у краёв каждого монитора стоят прозрачные полоски в 1 пиксель (`konshell-sidebar-edge`, слой Top); углы свободны — там горячий угол niri и кнопки окон. Закрывается кликом мимо, Esc или когда мышь ушла с панели (если в поиске пусто). Всё выключается и настраивается в «Настройки KonShell» → «Боковая панель»; без горячего края — только IPC:
 
 ```sh
-qs -c konshell ipc call sidebar toggle|open|close
-qs -c konshell ipc call sidebar note                     # окно новой заметки
-qs -c konshell ipc call sidebar openNote <путь к .md> | closeNote
+konshell ipc call sidebar toggle|open|close
+konshell ipc call sidebar note                     # окно новой заметки
+konshell ipc call sidebar openNote <путь к .md> | closeNote
 ```
 
 - **Заметки** (`NotesList.qml`) — все `.md` из папки заметок, новые сверху, поиск по имени; дата в начале имени файла в списке не показывается. «+» — новая заметка, значок папки — открыть папку.
@@ -142,7 +144,7 @@ qs -c konshell ipc call sidebar openNote <путь к .md> | closeNote
 
 `services/Cursor.qml`: при `cursor.manage` (по умолчанию) оболочка задаёт одну тему и размер курсора (`cursor.theme`, `cursor.size`; «Настройки KonShell» → «Интерфейс» → «Курсор», темы — установленные в `~/.local/share/icons`, `~/.icons`, `/usr/share/icons`):
 
-- `~/.config/niri/konshell-cursor.kdl` — блок `cursor`, подключён в конце `config.kdl` (`include "konshell-cursor.kdl"`, добавляет `scripts/install-theme-hooks.sh`) и перекрывает заданный выше; niri рисует курсор над окнами и оболочкой и передаёт `XCURSOR_THEME`/`XCURSOR_SIZE` запускаемым приложениям;
+- `user/cursor.kdl` — блок `cursor`, подключён из `user/niri.kdl` (тот подключён в конце `config.kdl`) и переопределяет заданный выше;
 - `gsettings` `cursor-theme` и `cursor-size` — для GTK и Firefox;
 - `~/.local/share/icons/default/index.theme` — тема по умолчанию для XWayland.
 
@@ -154,7 +156,7 @@ qs -c konshell ipc call sidebar openNote <путь к .md> | closeNote
 
 ## Окно настроек
 
-«Настройки KonShell» — обычное окно (`modules/settings/`). Открывается из лаунчера (оболочка сама поддерживает `~/.local/share/applications/konshell-settings.desktop`), строкой «Оформление» в центре управления или командой `qs -c konshell ipc call settings open appearance|bar`.
+«Настройки KonShell» — обычное окно (`modules/settings/`). Открывается из лаунчера (оболочка сама поддерживает `~/.local/share/applications/konshell-settings.desktop`), строкой «Оформление» в центре управления или командой `konshell ipc call settings open appearance|bar`.
 
 - **Оформление** — тёмная тема, акцент, прозрачность, палитра, обои, какие приложения перекрашивать.
 - **Панель** — высота, расположение виджетов и значки трея. Виджеты расставляются перетаскиванием (`modules/settings/LayoutEditor.qml`, карточки — `LayoutCard.qml`): зоны «Слева», «По центру», «Справа» стоят рядом, как на самой панели; карточку можно перенести внутри зоны, в другую зону или в «Скрытые» (крестик на карточке — тоже скрыть, клик по скрытой — вернуть). Хранится в `bar.left`, `bar.center`, `bar.right` (`settings.json`); панель перестраивается сразу. Так же устроен редактор карточек панели под часами.
@@ -183,20 +185,20 @@ qs -c konshell ipc call sidebar openNote <путь к .md> | closeNote
 
 ## Блокировка экрана
 
-`modules/lock/LockScreen.qml`, `services/Lock.qml`. Блокировка по протоколу ext-session-lock: если оболочка упадёт, niri оставит экран заблокированным, а перезапущенная оболочка (метка `~/.local/state/konshell/locked`) сразу заблокирует его снова.
+`modules/lock/LockScreen.qml`, `services/Lock.qml`. Блокировка по протоколу ext-session-lock: если оболочка упадёт, niri оставит экран заблокированным, а перезапущенная оболочка (метка `user/state/locked`) сразу заблокирует его снова.
 
 - Разблокировка: PIN (если задан) или системный пароль через PAM (`/etc/pam.d/swaylock` → стек `login`). Неверный PIN проверяется без PAM и не тратит попытки `pam_faillock`; после 5 неверных PIN подряд PIN отключается на 5 минут.
-- PIN хранится в `~/.local/state/konshell/lock-pin` (права 600) как солёный md5 — четыре цифры перебираются мгновенно, это защита только от случайного взгляда.
+- PIN хранится в `user/state/lock-pin` (права 600) как солёный md5 — четыре цифры перебираются мгновенно, это защита только от случайного взгляда.
 - Блокировка по простою (`lock.idleTimeout`, 300 с), выключение мониторов на заблокированном экране (`lock.screenOffTimeout`, 60 с), блокировка перед сном (`lock.beforeSleep`): оболочка держит задержку сна у systemd и отпускает её, только когда niri подтвердил блокировку.
 - `Super+Alt+L` или IPC:
 
 ```sh
-qs -c konshell ipc call lock lock
-qs -c konshell ipc call lock preview | closePreview   # вид без настоящей блокировки
-qs -c konshell ipc call lock setPin <PIN> | clearPin
+konshell ipc call lock lock
+konshell ipc call lock preview | closePreview   # вид без настоящей блокировки
+konshell ipc call lock setPin <PIN> | clearPin
 ```
 
-Если экран не разблокируется: перейдите в консоль (`Ctrl+Alt+F3`), войдите и выполните `pkill -x qs; qs -c konshell &` с `WAYLAND_DISPLAY=wayland-1` — новая оболочка возьмёт блокировку на себя; либо запустите `swaylock` в той же сессии и введите пароль.
+Если экран не разблокируется: перейдите в консоль (`Ctrl+Alt+F3`), войдите и выполните `pkill -x qs; ~/.local/bin/konshell -d` с `WAYLAND_DISPLAY=wayland-1` — новая оболочка возьмёт блокировку на себя; либо запустите `swaylock` в той же сессии и введите пароль.
 
 ## Режим обзора и ресурсы
 
@@ -249,12 +251,12 @@ layer-rule {
 
 | Приложение | Файл цветов | Как применяется |
 |---|---|---|
-| GTK 4 (libadwaita) и GTK 3 | `~/.config/gtk-{3,4}.0/konshell-colors.css` | новые окна; GTK 3 — только с темой adw-gtk3 (`sudo pacman -S adw-gtk-theme`) |
-| Qt 6 (через qt6ct) | `~/.config/qt6ct/colors/KonShell.conf` | сразу у запущенных (qt6ct следит за `qt6ct.conf`); приложениям нужна переменная `QT_QPA_PLATFORMTHEME=qt6ct` — её добавляет скрипт в блок `environment` конфига niri, действует для приложений, запущенных после перезахода в сеанс |
-| kitty (и fish в нём) | `~/.config/kitty/konshell-colors.conf` | сразу, `SIGUSR1` |
-| niri (рамки окон) | `~/.config/niri/konshell-colors.kdl` | сразу, `niri msg action load-config-file` |
-| Firefox (Pywalfox) | `~/.cache/wal/colors.json` | сразу, `pywalfox update`; нужно расширение Pywalfox |
-| Zed | `~/.config/zed/themes/konshell.json` | темы KonShell Dark и Light, Zed выбирает по системному режиму |
+| GTK 4 (libadwaita) и GTK 3 | `user/colors/gtk{3,4}.css` (`@import` из `~/.config/gtk-{3,4}.0/gtk.css`) | новые окна; GTK 3 — только с темой adw-gtk3 (`sudo pacman -S adw-gtk-theme`) |
+| Qt 6 (через qt6ct) | `user/colors/qt6ct.conf` (`color_scheme_path` в `qt6ct.conf`) | сразу у запущенных (qt6ct следит за `qt6ct.conf`); приложениям нужна переменная `QT_QPA_PLATFORMTHEME=qt6ct` — её добавляет скрипт в блок `environment` конфига niri, действует для приложений, запущенных после перезахода в сеанс |
+| kitty (и fish в нём) | `user/colors/kitty.conf` (`include` из `kitty.conf`) | сразу, `SIGUSR1` |
+| niri (рамки окон) | `user/colors/niri.kdl` (`include` из `user/niri.kdl`) | сразу, `niri msg action load-config-file` |
+| Firefox (Pywalfox) | `user/colors/pywalfox.json` (ссылка `~/.cache/wal/colors.json`) | сразу, `pywalfox update`; нужно расширение Pywalfox |
+| Zed | `user/colors/zed.json` (ссылка `~/.config/zed/themes/konshell.json`) | темы KonShell Dark и Light, Zed выбирает по системному режиму |
 
 Плюс `gsettings … color-scheme` (`prefer-dark` / `prefer-light`) — его видят порталы, браузеры и сайты.
 
@@ -269,7 +271,7 @@ scripts/install-theme-hooks.sh --uninstall  # убрать
 
 ### Диагностика
 
-- `qs -c konshell ipc call theme status` — состояние генерации, последняя ошибка, источник палитры, `usingFallback` (true — палитры из обоев ещё нет), исправления контраста.
+- `konshell ipc call theme status` — состояние генерации, последняя ошибка, источник палитры, `usingFallback` (true — палитры из обоев ещё нет), исправления контраста.
 - Сообщения в логе Quickshell начинаются с `color-scheme:`, `theme:` и `wallpaper:`.
 - Ошибки и поведение:
 

@@ -32,8 +32,7 @@ Singleton {
     property int revision: 0
 
     // Миниатюры для страницы «Оформление»: делаются один раз в фоне (scripts/make-thumbnails.sh).
-    readonly property string thumbnailDir:
-        (Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache") + "/konshell/thumbnails"
+    readonly property string thumbnailDir: Paths.cache + "/thumbnails"
     // Растёт, когда готова новая партия миниатюр: сетка перечитывает их.
     property int thumbnailRevision: 0
 

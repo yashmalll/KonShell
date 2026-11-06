@@ -23,13 +23,13 @@ Singleton {
     property bool secure: false
 
     readonly property string markerPath:
-        (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/konshell/locked"
+        Paths.state + "/locked"
 
     // PIN экрана блокировки — в дополнение к системному паролю, не вместо него.
     // Хранится как "соль:md5(соль+PIN)" в файле с правами 600. Четыре цифры перебираются
     // мгновенно, если файл прочитать: хеш защищает только от случайного взгляда.
     readonly property string pinPath:
-        (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/konshell/lock-pin"
+        Paths.state + "/lock-pin"
     readonly property var pinRecord: {
         const parts = pinFile.text().trim().split(":");
         return parts.length === 2 && parts[1].length === 32 ? { salt: parts[0], hash: parts[1] } : null;

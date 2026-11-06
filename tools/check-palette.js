@@ -5,7 +5,7 @@
 //       прогоняет matugen и сборку токенов из config/color.js, печатает
 //       исправления контраста и нарушения WCAG для тёмного и светлого режима;
 //   node tools/check-palette.js --file [путь к palette.json]
-//       проверяет уже записанную палитру (по умолчанию ~/.local/state/konshell/palette.json);
+//       проверяет уже записанную палитру (по умолчанию user/state/palette.json);
 //   node tools/check-palette.js --fallback <#цвет>
 //       печатает JSON резервной палитры для вставки в config/fallback-palette.js.
 //
@@ -46,7 +46,7 @@ const args = process.argv.slice(2);
 let failures = 0;
 
 if (args[0] === "--file") {
-    const file = args[1] || path.join(process.env.HOME, ".local/state/konshell/palette.json");
+    const file = args[1] || path.join(__dirname, "..", "user", "state", "palette.json");
     const palette = JSON.parse(fs.readFileSync(file, "utf8"));
     console.log("источник:", JSON.stringify(palette.source));
     for (const mode of ["dark", "light"])
