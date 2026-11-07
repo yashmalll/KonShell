@@ -4,6 +4,7 @@
 #   ./install.sh                 установить или обновить подключение
 #   ./install.sh --yes           без вопросов (пакеты ставятся сразу)
 #   ./install.sh --no-packages   не трогать пакеты
+#   ./install.sh --update        git pull + установка новой версией и перезапуск
 #   ./install.sh --uninstall     убрать KonShell (настройки остаются в user/)
 #   ./install.sh --uninstall --purge   убрать вместе с настройками, PIN и кэшем
 #
@@ -17,7 +18,9 @@
 #   3. цвета приложений (scripts/install-theme-hooks.sh): kitty, GTK, Qt, Zed, Firefox;
 #   4. команда ~/.local/bin/konshell — то же, что qs -p <эта папка>;
 #   5. запуск оболочки, если вы в сеансе niri.
-# Повторный запуск ничего не дублирует.
+# Повторный запуск ничего не дублирует. --update сначала подтягивает свежую версию
+# репозитория (только fast-forward; при локальных правках останавливается), затем
+# выполняет установку уже новой версией скрипта.
 
 set -euo pipefail
 
@@ -35,16 +38,19 @@ include_line="include \"$user/niri.kdl\""
 include_comment="// KonShell: автозапуск, клавиши, обои, цвета ($repo)"
 marker="// KonShell: отключено —"
 
-yes=0 packages=1 uninstall=0 purge=0
+yes=0 packages=1 uninstall=0 purge=0 update=0
+rest=()
 for arg in "$@"; do
     case "$arg" in
+        -u|--update) update=1; continue ;;
         -y|--yes) yes=1 ;;
         --no-packages) packages=0 ;;
         --uninstall) uninstall=1 ;;
         --purge) purge=1 ;;
-        -h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "неизвестный параметр: $arg (см. --help)" >&2; exit 2 ;;
     esac
+    rest+=("$arg")
 done
 
 bold=$'\e[1m' dim=$'\e[2m' green=$'\e[32m' yellow=$'\e[33m' red=$'\e[31m' reset=$'\e[0m'
@@ -73,6 +79,36 @@ reload_niri() {
         niri msg action load-config-file >/dev/null 2>&1 || true
     fi
 }
+
+# ---------------------------------------------------------------- обновление
+
+if [ "$update" -eq 1 ]; then
+    [ "$uninstall" -eq 0 ] || die "--update и --uninstall вместе не используются"
+    command -v git >/dev/null 2>&1 || die "нет git (sudo pacman -S git)"
+    git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+        || die "$repo — не git-репозиторий; обновите вручную (git clone заново)"
+
+    step "Обновление KonShell"
+    if [ -n "$(git -C "$repo" status --porcelain --untracked-files=no)" ]; then
+        git -C "$repo" status --short --untracked-files=no | sed 's/^/    /'
+        die "в репозитории есть несохранённые правки — закоммитьте или уберите их (git stash) и повторите"
+    fi
+    branch=$(git -C "$repo" symbolic-ref --quiet --short HEAD) \
+        || die "репозиторий не на ветке (detached HEAD) — переключитесь: git -C \"$repo\" switch main"
+    git -C "$repo" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1 \
+        || die "у ветки $branch нет upstream — задайте: git -C \"$repo\" branch -u origin/$branch"
+    old=$(git -C "$repo" rev-parse HEAD)
+    git -C "$repo" pull --ff-only --quiet || die "git pull не удался (ветка разошлась с удалённой?) — разберитесь вручную"
+    new=$(git -C "$repo" rev-parse HEAD)
+    if [ "$old" = "$new" ]; then
+        info "уже последняя версия ($(git -C "$repo" log -1 --format='%h %s'))"
+    else
+        info "$(git -C "$repo" rev-list --count "$old..$new") новых коммитов:"
+        git -C "$repo" log --format='      %h %s' "$old..$new" | head -20
+    fi
+    # Дальше — установка уже обновлённым скриптом: в нём могли поменяться шаги.
+    exec "$repo/install.sh" "${rest[@]}"
+fi
 
 # Убрать из config.kdl строки KonShell: свой include и подключения прежних версий
 # (konshell.kdl, konshell-colors.kdl, konshell-cursor.kdl) вместе с пометками над ними.
