@@ -293,9 +293,24 @@ step "Запуск"
 reload_niri
 if [ -n "${NIRI_SOCKET:-}" ] && [ -n "${WAYLAND_DISPLAY:-}" ]; then
     stop_shell
-    sleep 1
-    setsid -f qs -p "$repo" >/dev/null 2>&1 < /dev/null
-    info "оболочка запущена"
+    # Ждём, пока старая оболочка действительно завершится: иначе новая может
+    # не стартовать (занят IPC и слои), особенно после обновления кода.
+    for _ in $(seq 1 50); do
+        pgrep -f -- "qs .*$repo" >/dev/null 2>&1 || break
+        sleep 0.1
+    done
+    pkill -KILL -f -- "qs .*$repo" >/dev/null 2>&1 || true
+    log=$(mktemp "${TMPDIR:-/tmp}/konshell-start.XXXXXX")
+    setsid -f qs -p "$repo" >"$log" 2>&1 < /dev/null
+    sleep 2
+    if pgrep -f -- "qs .*$repo" >/dev/null 2>&1; then
+        info "оболочка запущена"
+        rm -f "$log"
+    else
+        warn "оболочка не запустилась, вывод qs:"
+        sed 's/^/      /' "$log" | tail -n 30
+        info "полный вывод: $log; запуск вручную: qs -p $repo"
+    fi
 else
     info "вы не в сеансе niri — оболочка запустится при следующем входе"
 fi
