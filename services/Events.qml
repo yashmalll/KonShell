@@ -25,7 +25,7 @@ Singleton {
         revision;
         const map = {};
         for (const e of events)
-            (map[e.date] ??= []).push(e);
+            (map[e.date] = map[e.date] || []).push(e);
         for (const k in map)
             map[k].sort((a, b) => a.time.localeCompare(b.time));
         return map;
