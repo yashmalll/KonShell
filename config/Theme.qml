@@ -188,12 +188,15 @@ Singleton {
 
     // Рамки и тени плавающих панелей (theme.borders, theme.shadows).
     readonly property bool borders: Settings.theme.borders
-    readonly property bool shadows: Settings.theme.shadows
+    readonly property bool shadows: Settings.theme.shadows && !economy
 
     // Длительности по шкале из qt-ui-design: мелкие элементы 120, панели 200,
     // смена палитры 300; theme.animationSpeed ускоряет или замедляет их.
     // При theme.reduceMotion все переходы мгновенные.
-    readonly property bool reduceMotion: Settings.theme.reduceMotion
+    readonly property bool reduceMotion: Settings.theme.reduceMotion || economy
+    // Режим экономии: включается сервисом Battery, пока ноутбук работает от батареи
+    // (system.batteryEconomy) — без теней и анимаций, реже опрос системы.
+    property bool economy: false
     readonly property real animationFactor: reduceMotion ? 0 : 1 / Math.max(0.25, Math.min(4, Settings.theme.animationSpeed))
     readonly property QtObject anim: QtObject {
         readonly property int fast: Math.round(120 * root.animationFactor)

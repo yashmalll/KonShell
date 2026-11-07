@@ -82,7 +82,7 @@ Singleton {
     }
 
     Timer {
-        interval: 2000
+        interval: Theme.economy ? 5000 : 2000
         repeat: true
         running: root.needed
         triggeredOnStart: true

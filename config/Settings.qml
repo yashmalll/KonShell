@@ -324,6 +324,10 @@ Singleton {
                 // Предупреждение о низком заряде, %: обычное и срочное; 0 — не предупреждать.
                 property int batteryWarning: 15
                 property int batteryCritical: 5
+                // От батареи: профиль «Энергосбережение» (после зарядки возвращается прежний).
+                property bool autoPowerSaver: true
+                // От батареи: без теней и анимаций, реже опрос системы.
+                property bool batteryEconomy: true
             }
 
             property JsonObject media: JsonObject {

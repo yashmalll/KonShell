@@ -334,6 +334,13 @@ var options = [
     { section: "power", group: "Батарея", key: "system.batteryCritical", type: "choice", title: "Срочное предупреждение",
       def: 5, choices: [[0, "Нет"], [3, "3 %"], [5, "5 %"], [10, "10 %"]] },
 
+    { section: "power", group: "Экономия заряда", key: "system.autoPowerSaver", type: "switch", title: "Энергосбережение от батареи",
+      def: true, hint: "Отключили зарядку — включается профиль «Энергосбережение», подключили — возвращается прежний",
+      keywords: "аккумулятор профиль питания" },
+    { section: "power", group: "Экономия заряда", key: "system.batteryEconomy", type: "switch", title: "Лёгкий режим от батареи",
+      def: true, hint: "Без теней и анимаций, система опрашивается реже: меньше работы процессора и видеокарты",
+      keywords: "аккумулятор анимации тени" },
+
     { section: "power", group: "Меню выключения", key: "session.confirm", type: "switch", title: "Подтверждать отсчётом",
       def: true, hint: "Выход, перезагрузка и выключение — после обратного отсчёта, который можно отменить",
       keywords: "выключение перезагрузка выход сеанс shutdown reboot logout" },

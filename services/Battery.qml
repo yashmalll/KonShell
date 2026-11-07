@@ -112,7 +112,41 @@ Singleton {
         }
     }
 
+    // Лёгкий режим: пока работаем от батареи, Theme.economy = true (тени, анимации, опрос).
+    readonly property bool economy: available && !pluggedIn && Settings.system.batteryEconomy
+
+    Binding {
+        target: Theme
+        property: "economy"
+        value: root.economy
+    }
+
+    // Автопрофиль: от батареи — «Энергосбережение», от сети — прежний профиль.
+    // Если профиль за это время сменили вручную, при подключении зарядки его не трогаем.
+    property int savedProfile: -1
+
+    function applyAutoProfile() {
+        if (!available || !Settings.system.autoPowerSaver)
+            return;
+        if (!pluggedIn) {
+            if (savedProfile < 0 && profile !== PowerProfile.PowerSaver) {
+                savedProfile = profile;
+                setProfile(PowerProfile.PowerSaver);
+            }
+        } else if (savedProfile >= 0) {
+            if (profile === PowerProfile.PowerSaver && profiles.includes(savedProfile))
+                setProfile(savedProfile);
+            savedProfile = -1;
+        }
+    }
+
+    Component.onCompleted: applyAutoProfile()
+    onAvailableChanged: applyAutoProfile()
+
     onPercentIntChanged: checkLevel()
     onChargingChanged: checkLevel()
-    onPluggedInChanged: checkLevel()
+    onPluggedInChanged: {
+        checkLevel();
+        applyAutoProfile();
+    }
 }

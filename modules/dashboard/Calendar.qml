@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.config
+import qs.services
 import qs.widgets
 
 // Календарь на месяц: листается стрелками и колесом мыши, сегодня — акцентный круг.
@@ -12,6 +13,8 @@ Column {
     readonly property date today: clock.date
     property int year: today.getFullYear()
     property int month: today.getMonth()
+    // Выбранный день: под сеткой — его события и поле добавления.
+    property var selected: null
 
     readonly property bool showingToday: year === today.getFullYear() && month === today.getMonth()
     // 0 — воскресенье, как у Date.getDay().
@@ -163,6 +166,8 @@ Column {
                         readonly property bool inMonth: date.getMonth() === root.month
                         readonly property bool isToday: root.sameDay(date, root.today)
                         readonly property bool weekend: date.getDay() === 0 || date.getDay() === 6
+                        readonly property bool isSelected: root.selected !== null && root.sameDay(date, root.selected)
+                        readonly property bool hasEvents: Events.hasEvents(date)
 
                         width: root.cell
                         height: root.cell
@@ -175,6 +180,8 @@ Column {
                             color: day.isToday ? Theme.color.primary
                                 : dayArea.containsMouse ? Theme.color.hover
                                 : "transparent"
+                            border.width: day.isSelected ? 2 : 0
+                            border.color: Theme.color.focus
 
                             Behavior on color {
                                 ColorAnimation { duration: Theme.anim.fast }
@@ -192,6 +199,18 @@ Column {
                             font.features: { "tnum": 1 }
                         }
 
+                        // Точка под числом: в этот день есть события.
+                        Rectangle {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
+                            width: 4
+                            height: 4
+                            radius: 2
+                            visible: day.hasEvents
+                            color: day.isToday ? Theme.color.primaryText : Theme.color.primary
+                        }
+
                         MouseArea {
                             id: dayArea
 
@@ -201,6 +220,9 @@ Column {
                             onClicked: {
                                 if (!day.inMonth)
                                     root.shift(day.date < new Date(root.year, root.month, 1) ? -1 : 1);
+                                root.selected = day.isSelected ? null : day.date;
+                                if (root.selected)
+                                    Qt.callLater(() => titleInput.forceActiveFocus());
                             }
                         }
                     }
@@ -220,6 +242,156 @@ Column {
                     root.shift(accumulated > 0 ? -1 : 1);
                     accumulated = 0;
                 }
+            }
+        }
+    }
+
+    // События выбранного дня и добавление нового.
+    Column {
+        id: eventsBox
+
+        width: parent.width
+        spacing: Theme.spacing.xs
+        visible: root.selected !== null
+
+        function submit() {
+            if (root.selected && Events.add(root.selected, timeInput.text, titleInput.text)) {
+                titleInput.text = "";
+                timeInput.text = "";
+            }
+        }
+
+        StyledText {
+            x: Theme.spacing.xs
+            text: root.selected ? Qt.formatDate(root.selected, "d MMMM, dddd") : ""
+            color: Theme.color.textMuted
+            font.pixelSize: Theme.font.caption
+            font.weight: Theme.font.medium
+        }
+
+        Repeater {
+            model: root.selected ? Events.forDay(root.selected) : []
+
+            Item {
+                id: row
+
+                required property var modelData
+
+                width: eventsBox.width
+                height: 28
+
+                StyledText {
+                    id: timeLabel
+
+                    x: Theme.spacing.xs
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 40
+                    text: row.modelData.time || "—"
+                    color: Theme.color.textMuted
+                    font.features: { "tnum": 1 }
+                }
+
+                StyledText {
+                    anchors.left: timeLabel.right
+                    anchors.right: removeButton.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: row.modelData.title
+                    elide: Text.ElideRight
+                }
+
+                IconButton {
+                    id: removeButton
+
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "edit-delete-symbolic"
+                    Accessible.name: "Удалить событие"
+                    onClicked: Events.remove(row.modelData.id)
+                }
+            }
+        }
+
+        StyledText {
+            x: Theme.spacing.xs
+            visible: root.selected !== null && Events.forDay(root.selected).length === 0
+            text: "Событий нет"
+            color: Theme.color.textDisabled
+            font.pixelSize: Theme.font.caption
+        }
+
+        // Время (необязательно, ЧЧ:ММ) и название; Enter — добавить.
+        Rectangle {
+            width: parent.width
+            height: 34
+            radius: Theme.radius.control
+            color: Theme.color.surface
+            border.width: timeInput.activeFocus || titleInput.activeFocus ? 2 : 1
+            border.color: timeInput.activeFocus || titleInput.activeFocus ? Theme.color.focus : Theme.color.border
+
+            TextInput {
+                id: timeInput
+
+                x: Theme.spacing.md
+                width: 46
+                height: parent.height
+                verticalAlignment: TextInput.AlignVCenter
+                color: Theme.color.text
+                selectionColor: Theme.color.selection
+                selectedTextColor: Theme.color.text
+                font.family: Theme.font.family
+                font.pixelSize: Theme.font.body
+                maximumLength: 5
+                clip: true
+                activeFocusOnTab: true
+                Keys.onReturnPressed: titleInput.forceActiveFocus()
+                Keys.onEnterPressed: titleInput.forceActiveFocus()
+
+                StyledText {
+                    anchors.fill: parent
+                    verticalAlignment: Text.AlignVCenter
+                    text: "ЧЧ:ММ"
+                    color: Theme.color.textMuted
+                    visible: timeInput.text === ""
+                }
+            }
+
+            TextInput {
+                id: titleInput
+
+                anchors.left: timeInput.right
+                anchors.leftMargin: Theme.spacing.sm
+                anchors.right: addButton.left
+                anchors.rightMargin: Theme.spacing.xs
+                height: parent.height
+                verticalAlignment: TextInput.AlignVCenter
+                color: Theme.color.text
+                selectionColor: Theme.color.selection
+                selectedTextColor: Theme.color.text
+                font.family: Theme.font.family
+                font.pixelSize: Theme.font.body
+                clip: true
+                activeFocusOnTab: true
+                Keys.onReturnPressed: eventsBox.submit()
+                Keys.onEnterPressed: eventsBox.submit()
+
+                StyledText {
+                    anchors.fill: parent
+                    verticalAlignment: Text.AlignVCenter
+                    text: "Новое событие"
+                    color: Theme.color.textMuted
+                    visible: titleInput.text === ""
+                }
+            }
+
+            IconButton {
+                id: addButton
+
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.spacing.xs
+                anchors.verticalCenter: parent.verticalCenter
+                icon: "list-add-symbolic"
+                Accessible.name: "Добавить событие"
+                onClicked: eventsBox.submit()
             }
         }
     }
