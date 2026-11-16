@@ -27,6 +27,7 @@ ShellRoot {
     Backdrop {}
     AppearanceIpc {}
     Bar {}
+    IslandIpc {}
     Dock {}
     Dashboard {}
     Launcher {}

@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.config
+import "../config/window-state.js" as WindowState
 
 // Состояние niri из потока событий IPC и отправка действий.
 // После переподключения niri заново присылает полное состояние,
@@ -41,6 +42,10 @@ Singleton {
         return map;
     }
     readonly property string currentLayoutLabel: layoutLabels[currentLayout] ?? currentLayout.slice(0, 2).toUpperCase()
+
+    function fullscreenOn(output, width, height) {
+        return WindowState.fullscreenOn(windows, workspaces, output, width, height, overviewOpen);
+    }
 
     function workspacesOn(output) {
         return workspaces.filter(ws => ws.output === output);

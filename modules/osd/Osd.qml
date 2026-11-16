@@ -16,6 +16,9 @@ Scope {
 
     property string kind: "volume"
     property bool shown: false
+    onShownChanged: Ui.islandOsdShown = shown
+    onKindChanged: Ui.islandOsdKind = kind
+    Component.onDestruction: Ui.islandOsdShown = false
 
     // PipeWire присылает начальные значения после запуска: их не показываем.
     property bool armed: false
@@ -36,6 +39,14 @@ Scope {
         kind = newKind;
         shown = true;
         hideTimer.restart();
+    }
+
+    IpcHandler {
+        target: "osd"
+        function preview(kind: string): void {
+            if (["volume", "mic", "brightness"].includes(kind))
+                root.show(kind);
+        }
     }
 
     IpcHandler {
@@ -111,7 +122,7 @@ Scope {
     PopupLoader {
         id: popup
 
-        open: root.shown
+        open: root.shown && !Settings.bar.islandOsd
 
         PanelWindow {
 

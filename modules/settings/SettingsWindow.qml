@@ -5,6 +5,7 @@ import qs.config
 import qs.services
 import qs.widgets
 import "../../config/settings-schema.js" as Schema
+import "../../config/settings-navigation.js" as Navigation
 
 // Окно «Настройки KonShell» — обычное окно приложения с разделами слева.
 // Открывается из лаунчера (пункт «Настройки KonShell»: оболочка сама держит
@@ -34,6 +35,7 @@ Scope {
 
     // Условие when: [ключ, значение] или [ключ, [значения]].
     function shown(option) {
+        if (!Navigation.isRelevant(option, root.read)) return false;
         if (!option.when)
             return true;
         const current = read(option.when[0]);
@@ -221,6 +223,9 @@ Scope {
         function open(section: string): void {
             Ui.openSettings(section);
         }
+        function find(query: string): void {
+            Ui.openSettings("", query);
+        }
         // Без аргументов — для пункта лаунчера: Quickshell, разбирая Exec, выбрасывает
         // пустой аргумент "", и open() получил бы на один аргумент меньше.
         // Не show: «qs ipc call <цель> show» печатает описание цели вместо вызова.
@@ -268,12 +273,18 @@ Scope {
             id: window
 
             property string query: ""
+            property bool advanced: false
+            readonly property string selectedSection: Navigation.canonicalSection(Ui.settingsSection)
+            readonly property var selectedGroup: Navigation.groupFor(selectedSection)
+            readonly property var subsections: selectedGroup.sections.map(id => root.sections.find(s => s.id === id)).filter(Boolean)
+            readonly property int advancedCount: Schema.options.filter(o => o.section === selectedSection && root.shown(o) && Navigation.isAdvanced(o)).length
 
             // Группы для показа: раздел целиком или найденное по всем разделам.
             readonly property var groups: {
                 const list = query.trim() !== ""
                     ? Schema.options.filter(o => Schema.matches(o, query) && root.shown(o))
-                    : Schema.options.filter(o => o.section === Ui.settingsSection);
+                    : Schema.options.filter(o => o.section === selectedSection && root.shown(o)
+                        && (advanced || !Navigation.isAdvanced(o)));
                 const out = [];
                 for (const option of list) {
                     const key = option.section + "/" + option.group;
@@ -288,8 +299,8 @@ Scope {
             }
 
             title: "Настройки KonShell"
-            implicitWidth: 960
-            implicitHeight: 700
+            implicitWidth: 1040
+            implicitHeight: 720
             minimumSize: Qt.size(720, 460)
             color: Theme.color.background
 
@@ -315,7 +326,7 @@ Scope {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: 230
+                    width: window.width < 850 ? 210 : 240
                     color: Theme.color.surface
 
                     Column {
@@ -367,6 +378,7 @@ Scope {
                                 clip: true
                                 activeFocusOnTab: true
                                 onTextChanged: window.query = text
+                                Component.onCompleted: text = Ui.settingsQuery
 
                                 StyledText {
                                     anchors.fill: parent
@@ -398,42 +410,30 @@ Scope {
 
                                 width: nav.width
 
+                                spacing: 6
                                 Repeater {
-                                    model: Schema.categories
-
-                                    Column {
-                                        id: category
-
+                                    model: Navigation.groups
+                                    NavRow {
                                         required property var modelData
-                                        required property int index
-
                                         width: navColumn.width
-                                        spacing: Theme.spacing.xxs
-
-                                        SectionLabel {
-                                            leftPadding: Theme.spacing.md
-                                            topPadding: category.index > 0 ? Theme.spacing.lg : Theme.spacing.xs
-                                            bottomPadding: Theme.spacing.xs
-                                            text: category.modelData.name
-                                        }
-
-                                        Repeater {
-                                            model: root.sections.filter(s => s.category === category.modelData.id)
-
-                                            NavRow {
-                                                required property var modelData
-
-                                                width: category.width
-                                                icon: modelData.icon
-                                                title: modelData.name
-                                                selected: window.query === "" && Ui.settingsSection === modelData.id
-                                                onClicked: {
-                                                    search.text = "";
-                                                    Ui.settingsSection = modelData.id;
-                                                }
-                                            }
+                                        implicitHeight: 42
+                                        icon: modelData.icon
+                                        title: modelData.name
+                                        selected: window.query === "" && window.selectedGroup.id === modelData.id
+                                        onClicked: {
+                                            search.text = "";
+                                            Ui.settingsSection = modelData.sections[0];
                                         }
                                     }
+                                }
+                                StyledText {
+                                    width: parent.width - 24
+                                    leftPadding: 12
+                                    topPadding: 24
+                                    text: "Изменения сохраняются автоматически"
+                                    wrapMode: Text.Wrap
+                                    font.pixelSize: Theme.font.caption
+                                    color: Theme.color.textMuted
                                 }
                             }
                         }
@@ -447,9 +447,9 @@ Scope {
                     anchors.left: sidebar.right
                     anchors.right: parent.right
                     anchors.top: parent.top
-                    height: 84
+                    height: 80
 
-                    readonly property var section: root.sections.find(s => s.id === Ui.settingsSection) ?? null
+                    readonly property var section: root.sections.find(s => s.id === window.selectedSection) ?? null
 
                     // Название раздела и строка о том, что в нём.
                     Column {
@@ -460,7 +460,7 @@ Scope {
 
                         StyledText {
                             width: parent.width
-                            text: window.query !== "" ? "Результаты поиска" : header.section?.name ?? ""
+                            text: window.query !== "" ? "Результаты поиска" : window.selectedGroup.name
                             font.pixelSize: Theme.font.display
                             font.weight: Theme.font.medium
                             elide: Text.ElideRight
@@ -468,7 +468,7 @@ Scope {
 
                         StyledText {
                             width: parent.width
-                            text: window.query !== "" ? `По запросу «${window.query}»` : header.section?.desc ?? ""
+                            text: window.query !== "" ? `По запросу «${window.query}»` : Navigation.description(header.section)
                             color: Theme.color.textMuted
                             elide: Text.ElideRight
                             visible: text !== ""
@@ -486,12 +486,33 @@ Scope {
                     }
                 }
 
+                Flow {
+                    id: sectionTabs
+                    anchors.left: sidebar.right
+                    anchors.right: parent.right
+                    anchors.top: header.bottom
+                    anchors.leftMargin: Theme.spacing.xl
+                    anchors.rightMargin: Theme.spacing.xl
+                    spacing: 6
+                    height: window.query === "" ? implicitHeight + 16 : 0
+                    visible: window.query === ""
+                    Repeater {
+                        model: window.subsections
+                        TextButton {
+                            required property var modelData
+                            text: Navigation.label(modelData)
+                            primary: modelData.id === window.selectedSection
+                            onClicked: Ui.settingsSection = modelData.id
+                        }
+                    }
+                }
+
                 Flickable {
                     id: page
 
                     anchors.left: sidebar.right
                     anchors.right: parent.right
-                    anchors.top: header.bottom
+                    anchors.top: sectionTabs.bottom
                     anchors.bottom: parent.bottom
                     contentWidth: width
                     contentHeight: content.implicitHeight + Theme.spacing.xl
@@ -512,6 +533,12 @@ Scope {
                             text: `Ничего не нашлось по запросу «${window.query}»`
                             color: Theme.color.textMuted
                             visible: window.query !== "" && window.groups.length === 0
+                        }
+
+                        TextButton {
+                            text: window.advanced ? "Скрыть дополнительные параметры" : `Дополнительные параметры · ${window.advancedCount}`
+                            visible: window.query === "" && window.advancedCount > 0
+                            onClicked: window.advanced = !window.advanced
                         }
 
                         Repeater {
@@ -542,7 +569,7 @@ Scope {
                                 // Группа — заголовок и карточка с параметрами, между ними — линии.
                                 StyledText {
                                     leftPadding: Theme.spacing.xxs
-                                    text: groupColumn.modelData.name
+                                    text: Navigation.groupLabel(groupColumn.modelData.name)
                                     font.weight: Theme.font.medium
                                 }
 
@@ -551,8 +578,7 @@ Scope {
                                     implicitHeight: groupOptions.implicitHeight + Theme.spacing.md * 2
                                     radius: Theme.radius.panel
                                     color: Theme.color.surface
-                                    border.width: Theme.borders ? 1 : 0
-                                    border.color: Theme.color.border
+                                    border.width: 0
 
                                     Column {
                                         id: groupOptions
@@ -606,7 +632,13 @@ Scope {
             Connections {
                 target: Ui
 
+                function onSettingsSearchRequested(query) {
+                    search.text = query;
+                }
+
                 function onSettingsSectionChanged() {
+                    window.advanced = false;
+                    search.text = "";
                     Qt.callLater(() => page.contentY = 0);
                 }
             }

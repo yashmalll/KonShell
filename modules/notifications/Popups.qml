@@ -9,7 +9,7 @@ import qs.services
 // top-right | top-left | top-center | bottom-right | bottom-left | bottom-center.
 // По таймеру окно только скрывается, уведомление остаётся в истории.
 LazyLoader {
-    active: Notifications.popups.length > 0 && !Notifications.centerOpen
+    active: !Settings.bar.islandNotifications && Notifications.popups.length > 0 && !Notifications.centerOpen
 
     PanelWindow {
         id: window

@@ -10,7 +10,11 @@ Singleton {
     id: root
 
     readonly property string settingsPath: Paths.settings
+    // Общая геометрия островка и отступы открываемых под ним панелей.
+    readonly property int panelHeight: Math.max(56, bar.height + 24)
 
+    property alias timer: adapter.timer
+    property alias profiles: adapter.profiles
     property alias bar: adapter.bar
     property alias clock: adapter.clock
     property alias dashboard: adapter.dashboard
@@ -69,8 +73,36 @@ Singleton {
         JsonAdapter {
             id: adapter
 
+            property JsonObject timer: JsonObject {
+                property int defaultMinutes: 10
+                property int workMinutes: 25
+                property int breakMinutes: 5
+                property int longBreakMinutes: 15
+                property bool autoAdvance: true
+                property bool focusDuringWork: true
+                property bool notify: true
+            }
+            property JsonObject profiles: JsonObject {
+                property string active: "custom"
+                property list<string> workWidgets: ["workspaces", "clock", "keyboard", "status", "notifications"]
+                property list<string> restWidgets: ["workspaces", "clock", "media", "weather", "tray", "keyboard", "status", "notifications"]
+                property list<string> workCards: ["clock", "calendar", "system", "notes", "network"]
+                property list<string> restCards: ["clock", "calendar", "weather", "media", "notes"]
+            }
+
             property JsonObject bar: JsonObject {
                 property int height: 32
+                property bool compactHeader: true
+                property list<string> quickActions: ["focus", "dnd", "mic", "caffeine"]
+                property list<string> pinnedActions: ["note", "folder", "screenshot"]
+                property string pinnedDirectory: ""
+                property bool autoHide: true
+                property bool islandHint: true
+                property string workspaceStyle: "map"
+                property bool islandNotifications: true
+                property bool islandOsd: true
+                property bool islandGlance: true
+                property int islandCollapseDelay: 450
                 // Расположение виджетов по зонам панели, слева направо.
                 // Виджеты: workspaces, windowTitle, tray, keyboard, status, notifications, media, network, note, date, weather, sysmon, clock.
                 // Не указанный ни в одной зоне виджет скрыт.
@@ -254,6 +286,7 @@ Singleton {
 
             property JsonObject lock: JsonObject {
                 // Секунды простоя до блокировки; 0 — не блокировать по простою.
+                property bool pinEnabled: false
                 property int idleTimeout: 300
                 // Секунды на заблокированном экране до выключения мониторов; 0 — не выключать.
                 property int screenOffTimeout: 60
@@ -321,6 +354,8 @@ Singleton {
             }
 
             property JsonObject system: JsonObject {
+                property bool privacyIndicator: true
+                property int focusMinutes: 25
                 // Предупреждение о низком заряде, %: обычное и срочное; 0 — не предупреждать.
                 property int batteryWarning: 15
                 property int batteryCritical: 5

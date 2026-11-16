@@ -7,13 +7,24 @@ import qs.config
 import qs.services
 import qs.widgets
 
-// Лаунчер приложений. Открывается через IPC:
+// Общий поиск: приложения, заметки, настройки и действия. Открывается через IPC:
 //   qs -c konshell ipc call launcher toggle
 // Окно создаётся заново при каждом открытии, поэтому поиск всегда пустой.
 Scope {
     id: root
 
     property bool shown: false
+    onShownChanged: {
+        if (shown) {
+            Ui.closeIslandPanels();
+            Notes.checkDirectory();
+        }
+    }
+
+    Connections {
+        target: Ui
+        function onSearchRequested() { root.shown = true; }
+    }
 
     // Обзор niri открыт — лаунчер с захватом клавиатуры мешал бы им управлять.
     Connections {
@@ -45,6 +56,9 @@ Scope {
         open: root.shown
 
         PanelWindow {
+            id: launcherWindow
+            property string searchScope: "all"
+            readonly property var results: GlobalSearch.search(search.text, searchScope)
 
             // Скрытое окно (PopupLoader.keepLoaded) не показывается, но и не удаляется.
 
@@ -54,6 +68,7 @@ Scope {
             onVisibleChanged: {
                 if (visible) {
                     search.text = "";
+                    launcherWindow.searchScope = "all";
                     list.currentIndex = 0;
                     list.positionViewAtBeginning();
                     search.forceActiveFocus();
@@ -102,7 +117,8 @@ Scope {
                 anchors.horizontalCenter: parent.horizontalCenter
                 // Чуть выше центра по правилу третей: взгляд сразу попадает в поле.
                 y: parent.height * 0.22
-                width: Settings.launcher.width
+                width: Math.min(Settings.launcher.width, windowScreenWidth - 24)
+                readonly property real windowScreenWidth: launcherWindow.screen?.width ?? 1920
                 height: content.implicitHeight + Theme.spacing.sm * 2
 
                 // Поглощает клики внутри окна, чтобы они не закрывали лаунчер.
@@ -185,10 +201,34 @@ Scope {
 
                             StyledText {
                                 anchors.fill: parent
-                                text: "Поиск приложений"
+                                text: "Приложения, заметки, настройки, действия"
                                 color: Theme.color.textMuted
                                 font.pixelSize: Theme.font.title
                                 visible: search.text === ""
+                            }
+                        }
+                    }
+
+                    Flow {
+                        width: parent.width
+                        spacing: 5
+                        Repeater {
+                            model: [
+                                { id: "all", label: "Всё" },
+                                { id: "apps", label: "Приложения" },
+                                { id: "notes", label: "Заметки" },
+                                { id: "settings", label: "Настройки" },
+                                { id: "actions", label: "Действия" }
+                            ]
+                            TextButton {
+                                required property var modelData
+                                text: modelData.label
+                                primary: launcherWindow.searchScope === modelData.id
+                                onClicked: {
+                                    launcherWindow.searchScope = modelData.id;
+                                    list.currentIndex = 0;
+                                    search.forceActiveFocus();
+                                }
                             }
                         }
                     }
@@ -197,25 +237,22 @@ Scope {
                         id: list
 
                         function launch(index) {
-                            const app = model.values[index];
-                            if (!app)
+                            const result = model[index];
+                            if (!result)
                                 return;
-                            Apps.recordLaunch(app);
-                            app.execute();
                             root.shown = false;
+                            Qt.callLater(() => GlobalSearch.activate(result));
                         }
 
                         width: parent.width
-                        height: Math.min(count, Settings.launcher.maxVisible) * box.itemHeight
+                        height: Math.max(0, Math.min(count, Settings.launcher.maxVisible, Math.floor((launcherWindow.height * 0.7 - 130) / box.itemHeight))) * box.itemHeight
                         visible: count > 0
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
                         highlightMoveDuration: Theme.anim.fast
                         keyNavigationWraps: true
 
-                        model: ScriptModel {
-                            values: Apps.search(search.text)
-                        }
+                        model: launcherWindow.results
 
                         highlight: Rectangle {
                             radius: Theme.radius.control
@@ -225,7 +262,7 @@ Scope {
                         delegate: Item {
                             id: entry
 
-                            required property DesktopEntry modelData
+                            required property var modelData
                             required property int index
 
                             readonly property bool current: ListView.isCurrentItem
@@ -258,7 +295,7 @@ Scope {
 
                                     StyledText {
                                         width: parent.width
-                                        text: entry.modelData.comment || entry.modelData.genericName
+                                        text: entry.modelData.category + (entry.modelData.description ? " · " + entry.modelData.description : "")
                                         // textMuted проверен по контрасту только на поверхностях, не на active.
                                         color: entry.current ? Theme.color.activeText : Theme.color.textMuted
                                         font.pixelSize: Theme.font.caption

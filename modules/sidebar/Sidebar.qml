@@ -73,7 +73,7 @@ Scope {
                 right: modelData.edge === "right"
             }
             margins {
-                top: Settings.bar.height + 48
+                top: Settings.panelHeight + 48
                 bottom: 48
             }
             implicitWidth: 1
@@ -148,7 +148,7 @@ Scope {
                 x: window.left ? 6 : window.width - width - 6
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                anchors.topMargin: Settings.bar.height + 6
+                anchors.topMargin: Settings.panelHeight + 6
                 anchors.bottomMargin: 6
                 width: Math.max(300, Math.min(520, Settings.sidebar.width))
                 clip: true

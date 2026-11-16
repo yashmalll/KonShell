@@ -7,7 +7,53 @@ import Quickshell
 Singleton {
     id: root
 
+    signal islandDismissRequested
+    signal searchRequested
+
     property bool controlCenterOpen: false
+    property bool timerOpen: false
+    function openTimer() { timerOpen = true; }
+    onTimerOpenChanged: {
+        if (timerOpen) {
+            privacyOpen = false;
+            dashboardOpen = false;
+            controlCenterOpen = false;
+            Notifications.centerOpen = false;
+            sidebarOpen = false;
+        }
+    }
+    property bool privacyOpen: false
+    function openPrivacy() { privacyOpen = true; }
+    onPrivacyOpenChanged: {
+        if (privacyOpen) {
+            timerOpen = false;
+            dashboardOpen = false;
+            controlCenterOpen = false;
+            Notifications.centerOpen = false;
+            sidebarOpen = false;
+        }
+    }
+    function closeIslandPanels() {
+        timerOpen = false;
+        privacyOpen = false;
+        dashboardOpen = false;
+        controlCenterOpen = false;
+        Notifications.centerOpen = false;
+        islandPinned = false;
+    }
+    // Индикаторы используют общий островок на активном мониторе.
+    property bool islandOsdShown: false
+    property string islandOsdKind: "volume"
+    property string islandOrigin: "center"
+    function openIslandAt(origin) {
+        if (!["left", "right", "center"].includes(origin)) return false;
+        islandOrigin = origin;
+        if (origin === "left") openDashboard(false);
+        else if (origin === "right") { controlCenterPage = "main"; controlCenterOpen = true; }
+        else islandPinned = true;
+        return true;
+    }
+    property bool islandPinned: false
 
     // История буфера обмена (modules/clipboard).
     property bool clipboardOpen: false
@@ -17,6 +63,9 @@ Singleton {
 
     onSessionOpenChanged: {
         if (sessionOpen) {
+            timerOpen = false;
+            islandPinned = false;
+            privacyOpen = false;
             controlCenterOpen = false;
             dashboardOpen = false;
             sidebarOpen = false;
@@ -39,6 +88,8 @@ Singleton {
     // Одновременно открыта одна панель с клавиатурным фокусом.
     onDashboardOpenChanged: {
         if (dashboardOpen) {
+            timerOpen = false;
+            privacyOpen = false;
             controlCenterOpen = false;
             sidebarOpen = false;
             Notifications.centerOpen = false;
@@ -65,6 +116,7 @@ Singleton {
     property string notePath: ""
 
     function openNote(path) {
+        closeIslandPanels();
         notePath = path || "";
         noteOpen = true;
         sidebarOpen = false;
@@ -77,13 +129,19 @@ Singleton {
     // Окно «Настройки KonShell» и открытый в нём раздел — id из config/settings-schema.js.
     property bool settingsOpen: false
     property string settingsSection: "appearance"
+    property string settingsQuery: ""
+    signal settingsSearchRequested(string query)
+    onSettingsOpenChanged: if (!settingsOpen) settingsQuery = ""
 
     // Окно уже открыто (возможно, на другом рабочем столе) — окно настроек
     // по этому сигналу переводит на себя фокус.
     signal settingsRaiseRequested
 
-    function openSettings(section) {
+    function openSettings(section, query) {
+        closeIslandPanels();
         settingsSection = section || settingsSection;
+        settingsQuery = query || "";
+        settingsSearchRequested(settingsQuery);
         controlCenterOpen = false;
         if (settingsOpen)
             settingsRaiseRequested();
@@ -99,9 +157,12 @@ Singleton {
         function onOverviewOpenChanged() {
             if (!Niri.overviewOpen)
                 return;
+            root.timerOpen = false;
+            root.privacyOpen = false;
             root.controlCenterOpen = false;
             root.dashboardOpen = false;
             root.sidebarOpen = false;
+            root.islandPinned = false;
             Notifications.centerOpen = false;
         }
     }
@@ -110,13 +171,20 @@ Singleton {
         target: Notifications
 
         function onCenterOpenChanged() {
-            if (Notifications.centerOpen)
+            if (Notifications.centerOpen) {
+                root.timerOpen = false;
+                root.privacyOpen = false;
                 root.dashboardOpen = false;
+                root.controlCenterOpen = false;
+                root.sidebarOpen = false;
+            }
         }
     }
 
     onSidebarOpenChanged: {
         if (sidebarOpen) {
+            timerOpen = false;
+            privacyOpen = false;
             controlCenterOpen = false;
             dashboardOpen = false;
         }
@@ -124,6 +192,9 @@ Singleton {
 
     onControlCenterOpenChanged: {
         if (controlCenterOpen) {
+            timerOpen = false;
+            privacyOpen = false;
+            Notifications.centerOpen = false;
             dashboardOpen = false;
             sidebarOpen = false;
         } else {

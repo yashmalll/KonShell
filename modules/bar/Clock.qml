@@ -9,6 +9,8 @@ import qs.widgets
 Rectangle {
     id: root
 
+    property bool compact: false
+
     implicitWidth: label.implicitWidth + Theme.spacing.md * 2
     implicitHeight: Math.max(label.implicitHeight + Theme.spacing.xs * 2, Settings.bar.height - 8)
     radius: Theme.radius.control
@@ -25,14 +27,14 @@ Rectangle {
 
         anchors.centerIn: parent
         // Через локаль системы: Qt.formatDateTime пишет дни и месяцы по-английски.
-        text: Qt.locale().toString(clock.date, Settings.clock.format)
+        text: Qt.locale().toString(clock.date, root.compact ? "HH:mm" : Settings.clock.format)
         font.weight: Theme.font.medium
         font.features: { "tnum": 1 }
     }
 
     SystemClock {
         id: clock
-        precision: Settings.clock.format.includes("s") ? SystemClock.Seconds : SystemClock.Minutes
+        precision: !root.compact && Settings.clock.format.includes("s") ? SystemClock.Seconds : SystemClock.Minutes
     }
 
     MouseArea {

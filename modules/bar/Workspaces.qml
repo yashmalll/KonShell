@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import qs.config
 import qs.services
+import qs.widgets
 
 // Рабочие столы монитора. Активный показан мини-картой своей ленты niri:
 // каждая колонка — полоска пропорциональной ширины, сфокусированная выделена
@@ -13,6 +14,7 @@ Item {
     id: root
 
     required property string output
+    readonly property string style: Settings.bar.workspaceStyle
 
     // Логическая ширина монитора для масштаба мини-карты.
     readonly property real outputWidth: Quickshell.screens.find(s => s.name === output)?.width ?? 1536
@@ -53,7 +55,8 @@ Item {
                 readonly property var columns: active ? Niri.columnsOn(modelData) : []
 
                 // Слот шире своей отметки: в него удобно попасть мышью.
-                implicitWidth: Math.max(18, (active ? minimap.implicitWidth : dot.width) + Theme.spacing.sm)
+                implicitWidth: root.style === "numbers" ? 26
+                    : Math.max(18, (active && root.style === "map" ? minimap.implicitWidth : dot.width) + Theme.spacing.sm)
                 implicitHeight: root.implicitHeight
 
                 Behavior on implicitWidth {
@@ -65,13 +68,14 @@ Item {
                     id: dot
 
                     anchors.centerIn: parent
-                    width: slot.urgent ? 8 : 6
-                    height: width
+                    width: root.style === "bars" ? (slot.active ? 22 : 10) : slot.active ? 9 : slot.urgent ? 8 : 6
+                    height: root.style === "bars" ? 5 : width
                     radius: Theme.radius.full
-                    color: slot.urgent ? Theme.color.error : slot.occupied ? Theme.color.textMuted : "transparent"
-                    border.width: slot.occupied || slot.urgent ? 0 : 1.5
+                    color: slot.urgent ? Theme.color.error : slot.active ? Theme.color.primary
+                        : slot.occupied ? Theme.color.textMuted : "transparent"
+                    border.width: slot.active || slot.occupied || slot.urgent ? 0 : 1.5
                     border.color: Theme.color.outline
-                    opacity: slot.active ? 0 : 1
+                    opacity: root.style === "numbers" || (root.style === "map" && slot.active) ? 0 : 1
                     visible: opacity > 0
 
                     Behavior on opacity {
@@ -85,7 +89,7 @@ Item {
 
                     anchors.centerIn: parent
                     spacing: 2
-                    opacity: slot.active ? 1 : 0
+                    opacity: root.style === "map" && slot.active ? 1 : 0
                     visible: opacity > 0
 
                     Behavior on opacity {
@@ -117,6 +121,23 @@ Item {
                                 : modelData.focused ? Theme.color.primary
                                 : Theme.color.outline
                         }
+                    }
+                }
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 24
+                    height: 22
+                    radius: 11
+                    visible: root.style === "numbers"
+                    color: slot.active ? Theme.alpha(Theme.color.primary, 0.2) : "transparent"
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: slot.workspace.idx ?? ""
+                        font.pixelSize: Theme.font.caption
+                        font.weight: slot.active ? Font.DemiBold : Font.Normal
+                        color: slot.urgent ? Theme.color.error
+                            : slot.active ? Theme.color.primary : Theme.color.textMuted
                     }
                 }
 

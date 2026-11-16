@@ -1,339 +1,236 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
-import Quickshell.Widgets
 import qs.config
 import qs.services
 import qs.widgets
+import qs.modules.bar
 
-// Главная страница центра управления. Сверху вниз по важности:
-// заряд (или пользователь, если батареи нет), быстрые переключатели,
-// громкость и яркость, оформление, музыка.
+// Частые настройки видны сразу; дополнительные действия расположены ниже.
 Column {
     id: root
-
     signal openPage(string name)
+    readonly property bool wide: width >= 720
+    spacing: 16
 
-    readonly property string userName: {
-        const name = Quickshell.env("USER") ?? "";
-        return name.charAt(0).toUpperCase() + name.slice(1);
-    }
-
-    // Сколько работает компьютер — из /proc/uptime, раз в минуту, пока страница открыта.
-    property string uptimeText: ""
-
-    function updateUptime() {
-        uptimeFile.reload();
-        const seconds = parseFloat(uptimeFile.text().split(" ")[0]);
-        if (isNaN(seconds)) {
-            uptimeText = "";
-            return;
-        }
-        const days = Math.floor(seconds / 86400);
-        const hours = Math.floor(seconds % 86400 / 3600);
-        const minutes = Math.floor(seconds % 3600 / 60);
-        uptimeText = "Работает " + (days > 0 ? `${days} д ${hours} ч` : hours > 0 ? `${hours} ч ${minutes} мин` : `${minutes} мин`);
-    }
-
-    FileView {
-        id: uptimeFile
-
-        path: "/proc/uptime"
-        blockLoading: true
-        printErrors: false
-    }
-
-    Timer {
-        interval: 60000
-        repeat: true
-        triggeredOnStart: true
-        running: root.visible && !Battery.available
-        onTriggered: root.updateUptime()
-    }
-
-    spacing: Theme.spacing.lg
-
-    // Шапка: заряд слева, настройки и питание справа.
-    Item {
+    RowLayout {
         width: parent.width
-        implicitHeight: Math.max(batteryRow.visible ? batteryRow.implicitHeight : 0,
-                                 userRow.visible ? 40 : 0, headerButtons.implicitHeight)
+        spacing: 12
+        Item { Layout.fillWidth: true }
+        IconButton {
+            icon: "system-lock-screen-symbolic"
+            Accessible.name: "Заблокировать экран"
+            onClicked: Lock.lock("manual")
+        }
+        IconButton {
+            icon: "system-shutdown-symbolic"
+            Accessible.name: "Выключение, перезагрузка, выход"
+            onClicked: Ui.sessionOpen = true
+        }
+    }
 
-        // Заряд крупно, состояние и время — рядом приглушённым текстом.
-        Row {
-            id: batteryRow
-
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - headerButtons.width - Theme.spacing.sm
-            spacing: Theme.spacing.md
-            visible: Battery.available
-
-            SymbolIcon {
-                anchors.verticalCenter: parent.verticalCenter
-                implicitSize: 20
-                name: Battery.icon
-                color: Battery.percent < 0.15 && !Battery.charging ? Theme.color.error : Theme.color.text
+    Grid {
+        id: mainColumns
+        width: parent.width
+        columns: root.wide ? 2 : 1
+        spacing: 20
+        Column {
+            width: (mainColumns.width - mainColumns.spacing * (mainColumns.columns - 1)) / mainColumns.columns
+            spacing: 12
+            SectionLabel {
+                text: "Подключения"
             }
+            Grid {
+                width: parent.width
+                columns: 2
+                spacing: 8
+                Tile {
+                    readonly property bool wifi: NetworkState.wifiDevice !== null
 
-            StyledText {
-                anchors.verticalCenter: parent.verticalCenter
-                text: `${Math.round(Battery.percent * 100)}%`
-                font.pixelSize: Theme.font.display
-                font.weight: Theme.font.medium
-                font.features: { "tnum": 1 }
-            }
-
-            StyledText {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - x
-                text: {
-                    const time = Battery.formatTime(Battery.timeLeft);
-                    if (Battery.full)
-                        return "Заряжена";
-                    if (Battery.charging)
-                        return time ? `Заряжается, до полной ${time}` : "Заряжается";
-                    if (Battery.pluggedIn)
-                        return "Подключена к сети";
-                    return time ? `Осталось ${time}` : "От батареи";
+                    width: (parent.width - parent.spacing) / 2
+                    icon: wifi ? (!NetworkState.wifiEnabled ? "network-wireless-disabled-symbolic" : NetworkState.activeWifi ? NetworkState.signalIcon(NetworkState.activeWifi.signalStrength) : "network-wireless-offline-symbolic") : NetworkState.wiredConnected ? "network-wired-symbolic" : "network-offline-symbolic"
+                    title: wifi ? "Wi-Fi" : "Сеть"
+                    subtitle: wifi ? (!NetworkState.wifiEnabled ? (NetworkState.wiredConnected ? "Выключен · есть кабель" : "Выключен") : NetworkState.activeWifi ? NetworkState.activeWifi.name : NetworkState.wiredConnected ? "Через кабель" : "Не подключено") : NetworkState.wiredConnected ? "Кабель подключён" : "Нет подключения"
+                    active: wifi ? NetworkState.wifiEnabled : NetworkState.wiredConnected
+                    hasDetails: wifi
+                    onClicked: {
+                        if (wifi) {
+                            NetworkState.setWifiEnabled(!NetworkState.wifiEnabled);
+                        } else {
+                            Ui.controlCenterOpen = false;
+                            Ui.dashboardOpen = true;
+                        }
+                    }
+                    onDetailsClicked: root.openPage("wifi")
                 }
-                color: Theme.color.textMuted
-                font.pixelSize: Theme.font.caption
+                Tile {
+                    width: (parent.width - parent.spacing) / 2
+                    icon: BluetoothState.icon
+                    title: "Bluetooth"
+                    subtitle: BluetoothState.summary
+                    active: BluetoothState.enabled
+                    enabled: BluetoothState.available
+                    hasDetails: BluetoothState.available
+                    onClicked: BluetoothState.setEnabled(!BluetoothState.enabled)
+                    onDetailsClicked: root.openPage("bluetooth")
+                }
+            }
+            SectionLabel {
+                text: "Режимы"
+            }
+            Grid {
+                width: parent.width
+                columns: 2
+                spacing: 8
+                Tile {
+                    width: (parent.width - parent.spacing) / 2
+                    icon: "preferences-system-time-symbolic"
+                    title: "Фокусировка"
+                    subtitle: FocusMode.summary
+                    active: FocusMode.active
+                    onClicked: FocusMode.toggle()
+                }
+                Tile {
+                    width: (parent.width - parent.spacing) / 2
+                    icon: Notifications.dnd ? "notifications-disabled-symbolic" : "preferences-system-notifications-symbolic"
+                    title: "Не беспокоить"
+                    subtitle: Notifications.dnd ? "Включено" : "Выключено"
+                    active: Notifications.dnd
+                    onClicked: Notifications.setDnd(!Notifications.dnd)
+                }
+                Tile {
+                    width: (parent.width - parent.spacing) / 2
+                    icon: "preferences-desktop-screensaver-symbolic"
+                    title: "Не засыпать"
+                    subtitle: Caffeine.summary
+                    active: Caffeine.active
+                    onClicked: Caffeine.cycle()
+                }
+                Tile {
+                    width: (parent.width - parent.spacing) / 2
+                    icon: "microphone-sensitivity-high-symbolic"
+                    title: "Приватность"
+                    subtitle: Privacy.active ? Privacy.summary : "Микрофон, камера, экран"
+                    active: Privacy.active
+                    onClicked: Ui.openPrivacy()
+                }
             }
         }
-
-        // Без батареи: аватар (lock.avatarPath или ~/.face, иначе первая буква),
-        // имя пользователя и сколько работает компьютер.
-        Row {
-            id: userRow
-
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - headerButtons.width - Theme.spacing.sm
-            spacing: Theme.spacing.md
-            visible: !Battery.available
-
+        Column {
+            width: (mainColumns.width - mainColumns.spacing * (mainColumns.columns - 1)) / mainColumns.columns
+            spacing: 12
+            SectionLabel {
+                text: "Звук и экран"
+            }
+            // Громкость, микрофон и яркость — одной карточкой.
             Rectangle {
-                width: 40
-                height: 40
-                radius: Theme.radius.full
-                color: Theme.color.primaryContainer
+                width: parent.width
+                implicitHeight: sliders.implicitHeight + Theme.spacing.sm * 2
+                radius: Theme.radius.panel
+                color: Theme.color.surface
 
-                StyledText {
-                    anchors.centerIn: parent
-                    text: root.userName.charAt(0).toUpperCase()
-                    color: Theme.color.primaryContainerText
-                    font.pixelSize: Theme.font.title
-                    font.weight: Theme.font.medium
-                    visible: avatar.status !== Image.Ready
-                }
+                Column {
+                    id: sliders
 
-                ClippingRectangle {
-                    anchors.fill: parent
-                    radius: Theme.radius.full
-                    color: "transparent"
-                    visible: avatar.status === Image.Ready
+                    x: Theme.spacing.sm
+                    y: Theme.spacing.sm
+                    width: parent.width - Theme.spacing.sm * 2
+                    spacing: Theme.spacing.xxs
 
-                    Image {
-                        id: avatar
+                    SliderRow {
+                        icon: Audio.icon
+                        iconLabel: Audio.muted ? "Включить звук" : "Выключить звук"
+                        value: Audio.muted ? 0 : Audio.volume
+                        hasDetails: true
+                        onIconClicked: Audio.toggleMute()
+                        onMoved: value => Audio.setVolume(value)
+                        onDetailsClicked: root.openPage("audio")
+                    }
 
-                        anchors.fill: parent
-                        source: "file://" + (Settings.lock.avatarPath || Quickshell.env("HOME") + "/.face")
-                        sourceSize: Qt.size(80, 80)
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
+                    SliderRow {
+                        icon: Audio.micIcon
+                        iconLabel: Audio.micMuted ? "Включить микрофон" : "Выключить микрофон"
+                        value: Audio.micMuted ? 0 : Audio.micVolume
+                        visible: Audio.source !== null
+                        onIconClicked: Audio.toggleMicMute()
+                        onMoved: value => Audio.setMicVolume(value)
+                    }
+
+                    SliderRow {
+                        icon: "display-brightness-symbolic"
+                        value: Brightness.percent
+                        visible: Brightness.available
+                        iconClickable: false
+                        onMoved: value => Brightness.setPercent(value)
                     }
                 }
             }
 
             Column {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 40 - parent.spacing
-
-                StyledText {
+                id: outputPicker
+                width: parent.width
+                spacing: 4
+                property bool expanded: false
+                ListRow {
                     width: parent.width
-                    text: root.userName
-                    font.pixelSize: Theme.font.title
-                    font.weight: Theme.font.medium
-                    elide: Text.ElideRight
+                    icon: Audio.icon
+                    title: "Устройство вывода"
+                    subtitle: Audio.sink ? Audio.deviceName(Audio.sink) : "Нет доступных устройств"
+                    highlighted: outputPicker.expanded
+                    onClicked: outputPicker.expanded = !outputPicker.expanded
                 }
-
-                StyledText {
+                Column {
                     width: parent.width
-                    text: root.uptimeText
-                    color: Theme.color.textMuted
-                    font.pixelSize: Theme.font.caption
-                    elide: Text.ElideRight
-                    visible: text !== ""
+                    visible: outputPicker.expanded
+                    Repeater {
+                        model: ScriptModel { values: Audio.outputs }
+                        ListRow {
+                            required property var modelData
+                            width: outputPicker.width
+                            icon: "audio-speakers-symbolic"
+                            title: Audio.deviceName(modelData)
+                            checked: modelData === Audio.sink
+                            onClicked: { Audio.setOutput(modelData); outputPicker.expanded = false; }
+                        }
+                    }
+                    TextButton { text: "Выходы и микрофоны"; onClicked: root.openPage("audio") }
+                }
+            }
+
+            AppearanceRow {
+                width: parent.width
+                onClicked: Ui.openSettings("appearance")
+            }
+            SectionLabel {
+                text: "Питание и система"
+            }
+            Grid {
+                width: parent.width
+                columns: 2
+                spacing: 8
+                Tile {
+                    width: (parent.width - parent.spacing) / 2
+                    icon: Battery.profileIcon(Battery.profile)
+                    title: "Питание"
+                    subtitle: Battery.profileName(Battery.profile)
+                    active: Battery.profile !== Battery.profiles[1]
+                    onClicked: Battery.cycleProfile()
+                }
+                Tile {
+                    width: (parent.width - parent.spacing) / 2
+                    icon: "power-profile-performance-symbolic"
+                    title: "Система"
+                    subtitle: `ЦП ${Math.round(SystemStats.cpu * 100)}% · ОЗУ ${Math.round(SystemStats.memory * 100)}%`
+                    onClicked: {
+                        Ui.controlCenterOpen = false;
+                        Ui.dashboardOpen = true;
+                    }
                 }
             }
         }
-
-        Row {
-            id: headerButtons
-
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Theme.spacing.xs
-
-            // Круглые кнопки на подложке — заметнее, чем голые значки.
-            IconButton {
-                implicitWidth: 34
-                implicitHeight: 34
-                baseColor: Theme.color.surface
-                icon: "preferences-system-symbolic"
-                Accessible.name: "Настройки KonShell"
-                onClicked: Ui.openSettings("")
-            }
-
-            IconButton {
-                implicitWidth: 34
-                implicitHeight: 34
-                baseColor: Theme.color.surface
-                icon: "system-shutdown-symbolic"
-                Accessible.name: "Выключение, перезагрузка, выход"
-                onClicked: Ui.sessionOpen = true
-            }
-        }
     }
 
-    Grid {
-        id: tiles
-
-        readonly property real tileWidth: (width - spacing) / 2
-
-        width: parent.width
-        columns: 2
-        spacing: Theme.spacing.sm
-
-        // Есть Wi-Fi — плитка включает и выключает его, стрелка — список сетей.
-        // Только кабель — плитка показывает подключение и открывает карточку сети
-        // в панели под часами.
-        Tile {
-            readonly property bool wifi: NetworkState.wifiDevice !== null
-
-            width: tiles.tileWidth
-            icon: wifi ? (!NetworkState.wifiEnabled ? "network-wireless-disabled-symbolic"
-                          : NetworkState.activeWifi ? NetworkState.signalIcon(NetworkState.activeWifi.signalStrength)
-                          : "network-wireless-offline-symbolic")
-                : NetworkState.wiredConnected ? "network-wired-symbolic" : "network-offline-symbolic"
-            title: wifi ? "Wi-Fi" : "Сеть"
-            subtitle: wifi ? (!NetworkState.wifiEnabled ? (NetworkState.wiredConnected ? "Выключен · есть кабель" : "Выключен")
-                              : NetworkState.activeWifi ? NetworkState.activeWifi.name
-                              : NetworkState.wiredConnected ? "Через кабель" : "Не подключено")
-                : NetworkState.wiredConnected ? "Кабель подключён" : "Нет подключения"
-            active: wifi ? NetworkState.wifiEnabled : NetworkState.wiredConnected
-            hasDetails: wifi
-            onClicked: {
-                if (wifi) {
-                    NetworkState.setWifiEnabled(!NetworkState.wifiEnabled);
-                } else {
-                    Ui.controlCenterOpen = false;
-                    Ui.dashboardOpen = true;
-                }
-            }
-            onDetailsClicked: root.openPage("wifi")
-        }
-
-        Tile {
-            width: tiles.tileWidth
-            icon: BluetoothState.icon
-            title: "Bluetooth"
-            subtitle: BluetoothState.summary
-            active: BluetoothState.enabled
-            enabled: BluetoothState.available
-            hasDetails: BluetoothState.available
-            onClicked: BluetoothState.setEnabled(!BluetoothState.enabled)
-            onDetailsClicked: root.openPage("bluetooth")
-        }
-
-        Tile {
-            width: tiles.tileWidth
-            icon: Notifications.dnd ? "notifications-disabled-symbolic" : "preferences-system-notifications-symbolic"
-            title: "Не беспокоить"
-            subtitle: Notifications.dnd ? "Включено" : "Выключено"
-            active: Notifications.dnd
-            onClicked: Notifications.setDnd(!Notifications.dnd)
-        }
-
-        Tile {
-            width: tiles.tileWidth
-            icon: Battery.profileIcon(Battery.profile)
-            title: "Питание"
-            subtitle: Battery.profileName(Battery.profile)
-            active: Battery.profile !== Battery.profiles[1]
-            onClicked: Battery.cycleProfile()
-        }
-
-        Tile {
-            width: tiles.tileWidth
-            icon: "preferences-desktop-screensaver-symbolic"
-            title: "Не засыпать"
-            subtitle: Caffeine.summary
-            active: Caffeine.active
-            onClicked: Caffeine.cycle()
-        }
-
-        Tile {
-            width: tiles.tileWidth
-            icon: "power-profile-performance-symbolic"
-            title: "Система"
-            subtitle: `ЦП ${Math.round(SystemStats.cpu * 100)}% · ОЗУ ${Math.round(SystemStats.memory * 100)}%`
-            onClicked: {
-                Ui.controlCenterOpen = false;
-                Ui.dashboardOpen = true;
-            }
-        }
-    }
-
-    // Громкость, микрофон и яркость — одной карточкой.
-    Rectangle {
-        width: parent.width
-        implicitHeight: sliders.implicitHeight + Theme.spacing.sm * 2
-        radius: Theme.radius.panel
-        color: Theme.color.surface
-
-        Column {
-            id: sliders
-
-            x: Theme.spacing.sm
-            y: Theme.spacing.sm
-            width: parent.width - Theme.spacing.sm * 2
-            spacing: Theme.spacing.xxs
-
-            SliderRow {
-                icon: Audio.icon
-                iconLabel: Audio.muted ? "Включить звук" : "Выключить звук"
-                value: Audio.muted ? 0 : Audio.volume
-                hasDetails: true
-                onIconClicked: Audio.toggleMute()
-                onMoved: value => Audio.setVolume(value)
-                onDetailsClicked: root.openPage("audio")
-            }
-
-            SliderRow {
-                icon: Audio.micIcon
-                iconLabel: Audio.micMuted ? "Включить микрофон" : "Выключить микрофон"
-                value: Audio.micMuted ? 0 : Audio.micVolume
-                visible: Audio.source !== null
-                onIconClicked: Audio.toggleMicMute()
-                onMoved: value => Audio.setMicVolume(value)
-            }
-
-            SliderRow {
-                icon: "display-brightness-symbolic"
-                value: Brightness.percent
-                visible: Brightness.available
-                iconClickable: false
-                onMoved: value => Brightness.setPercent(value)
-            }
-        }
-    }
-
-    AppearanceRow {
-        width: parent.width
-        onClicked: Ui.openSettings("appearance")
-    }
-
-    MediaCard {
+    ActivityCard {
         width: parent.width
     }
 
@@ -362,7 +259,8 @@ Column {
             // Иконка яркости — просто подпись, не кнопка.
             activeFocusOnTab: sliderRow.iconClickable
             Accessible.name: sliderRow.iconLabel
-            onClicked: if (sliderRow.iconClickable) sliderRow.iconClicked()
+            onClicked: if (sliderRow.iconClickable)
+                sliderRow.iconClicked()
         }
 
         Slider {
@@ -382,7 +280,9 @@ Column {
             text: `${Math.round(sliderRow.value * 100)}%`
             color: Theme.color.textMuted
             font.pixelSize: Theme.font.caption
-            font.features: { "tnum": 1 }
+            font.features: {
+                "tnum": 1
+            }
         }
 
         IconButton {

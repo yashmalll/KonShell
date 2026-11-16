@@ -1,0 +1,14 @@
+const fs = require("fs");
+const path = require("path");
+const assert = require("assert/strict");
+const source = fs.readFileSync(path.join(__dirname, "../config/island-activity.js"), "utf8").replace(/^\.pragma library\s*$/m, "");
+const {choose} = new Function(source + "\nreturn {choose};")();
+const state = {timerAttention: false, recording: false, privacy: false, timer: false, media: true, focus: false, mediaAllowed: true};
+assert.equal(choose(state), "media");
+assert.equal(choose({...state, mediaAllowed: false}), "idle");
+assert.equal(choose({...state, focus: true}), "focus");
+assert.equal(choose({...state, timer: true}), "timer");
+assert.equal(choose({...state, timer: true, privacy: true}), "privacy");
+assert.equal(choose({...state, timer: true, privacy: true, recording: true}), "recording");
+assert.equal(choose({...state, timerAttention: true, privacy: true, recording: true}), "timer");
+console.log("Single activity card priority and focus/profile suppression: OK");

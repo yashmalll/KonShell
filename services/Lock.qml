@@ -45,7 +45,7 @@ Singleton {
     // true — введён верный PIN. Неверный ввод засчитывается, только если и пароль не подошёл
     // (вызов pinRejected из экрана блокировки).
     function checkPin(input) {
-        if (!hasPin || pinBlocked)
+        if (!Settings.lock.pinEnabled || !hasPin || pinBlocked)
             return false;
         if (Qt.md5(pinRecord.salt + input) === pinRecord.hash) {
             pinFailures = 0;

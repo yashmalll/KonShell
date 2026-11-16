@@ -169,6 +169,7 @@ Item {
 
                         text: modelData[1]
                         checked: on
+                        enabled: on || !root.option.maxSelected || root.plainValue.length < root.option.maxSelected
                         onClicked: root.write(on ? root.plainValue.filter(v => v !== modelData[0])
                                                  : root.plainValue.concat([modelData[0]]))
                     }

@@ -27,7 +27,9 @@ Column {
 
     StyledText {
         width: parent.width
-        text: Lock.hasPin
+        text: !Settings.lock.pinEnabled
+            ? "Для разблокировки используется системный пароль. Чтобы использовать PIN, включите вход по PIN выше."
+            : Lock.hasPin
             ? "PIN задан. Экран разблокирует и PIN, и пароль пользователя. После 5 неверных PIN подряд он отключается на 5 минут."
             : "PIN не задан: экран разблокирует только пароль пользователя."
         wrapMode: Text.Wrap

@@ -182,7 +182,7 @@ command -v pacman >/dev/null 2>&1 || die "нужен Arch Linux или прои�
 command -v niri >/dev/null 2>&1 || warn "niri не установлен — поставьте его (sudo pacman -S niri) и войдите в сеанс niri"
 
 # Обязательные: без них оболочка не запустится или не построит палитру.
-required=(quickshell matugen brightnessctl ffmpeg curl python libnotify xdg-utils)
+required=(quickshell matugen brightnessctl ffmpeg curl python python-dbus python-gobject libnotify xdg-utils)
 # Дополнительные: история буфера, запись экрана, перекраска Qt и GTK3, обои AVIF/JXL, Firefox.
 optional=(cliphist wl-clipboard wf-recorder slurp grim qt6ct adw-gtk-theme kimageformats python-pywalfox)
 

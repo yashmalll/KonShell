@@ -59,8 +59,13 @@ Item {
     // (скрытое окно PopupLoader показывает заново).
     onProgressChanged: {
         if (progress === 0 && !shown && started) {
-            started = false;
-            warm = true;
+            // Не менять источник binding progress во время его вычисления.
+            Qt.callLater(() => {
+                if (root.progress === 0 && !root.shown && root.started) {
+                    root.started = false;
+                    root.warm = true;
+                }
+            });
         }
     }
 

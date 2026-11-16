@@ -65,13 +65,35 @@ var sections = [
       desc: "Шаг и пределы громкости и яркости" },
     { id: "keyboard", category: "system", name: "Клавиатура", icon: "input-keyboard-symbolic",
       desc: "Подписи раскладок клавиатуры на панели" },
+    { id: "timer", category: "desktop", name: "Таймер и Pomodoro", icon: "preferences-system-time-symbolic", desc: "Рабочие интервалы, перерывы и оповещения" },
+    { id: "profiles", category: "desktop", name: "Профили", icon: "view-grid-symbolic", desc: "Виджеты и уведомления для работы и отдыха" },
+    { id: "focus", category: "system", name: "Фокусировка", icon: "preferences-system-time-symbolic",
+      desc: "Тихий режим и длительность сеанса концентрации" },
+    { id: "privacy", category: "system", name: "Приватность", icon: "microphone-sensitivity-high-symbolic",
+      desc: "Индикатор использования микрофона, камеры и экрана" },
     { id: "power", category: "system", name: "Питание", icon: "battery-good-symbolic",
       desc: "Предупреждения о заряде и меню выключения" },
     { id: "lock", category: "system", name: "Блокировка", icon: "system-lock-screen-symbolic",
       desc: "Экран блокировки, PIN и блокировка по простою" }
 ];
 
+var quickChoices = [["focus", "Фокус"], ["dnd", "Не беспокоить"], ["mic", "Микрофон"], ["caffeine", "Не засыпать"], ["volume", "Звук"], ["wifi", "Wi-Fi"], ["bluetooth", "Bluetooth"], ["lock", "Блокировка"]];
+var widgetChoices = [["workspaces", "Рабочие столы"], ["windowTitle", "Заголовок окна"], ["clock", "Часы"], ["keyboard", "Раскладка"], ["status", "Состояние"], ["notifications", "Уведомления"], ["media", "Музыка"], ["weather", "Погода"], ["tray", "Трей"], ["network", "Сеть"], ["note", "Заметка"], ["date", "Дата"], ["sysmon", "Монитор системы"]];
+var cardChoices = [["clock", "Часы"], ["calendar", "Календарь"], ["weather", "Погода"], ["media", "Музыка"], ["notes", "Заметки"], ["system", "Система"], ["network", "Сеть"]];
+
 var options = [
+    { section: "timer", group: "Таймер", key: "timer.defaultMinutes", type: "slider", title: "Длительность по умолчанию", def: 10, min: 1, max: 120, step: 1, unit: "minutes" },
+    { section: "timer", group: "Pomodoro", key: "timer.workMinutes", type: "choice", title: "Рабочий интервал", def: 25, choices: [[15,"15 минут"],[25,"25 минут"],[50,"50 минут"]] },
+    { section: "timer", group: "Pomodoro", key: "timer.breakMinutes", type: "choice", title: "Короткий перерыв", def: 5, choices: [[3,"3 минуты"],[5,"5 минут"],[10,"10 минут"]] },
+    { section: "timer", group: "Pomodoro", key: "timer.longBreakMinutes", type: "choice", title: "Перерыв после четырёх интервалов", def: 15, choices: [[10,"10 минут"],[15,"15 минут"],[20,"20 минут"],[30,"30 минут"]] },
+    { section: "timer", group: "Pomodoro", key: "timer.autoAdvance", type: "switch", title: "Автоматически начинать следующий этап", def: true },
+    { section: "timer", group: "Pomodoro", key: "timer.focusDuringWork", type: "switch", title: "Включать фокусировку во время работы", def: true },
+    { section: "timer", group: "Оповещения", key: "timer.notify", type: "switch", title: "Сообщать о завершении этапа", def: true, hint: "Важные оповещения видны и в тихом режиме" },
+    { section: "profiles", group: "Профиль", key: "profiles.active", type: "choice", title: "Текущий профиль", def: "custom", choices: [["custom","Мой"],["work","Работа"],["rest","Отдых"]], hint: "«Мой» сохраняет обычную раскладку; «Работа» включает тихий режим" },
+    { section: "profiles", group: "Работа", key: "profiles.workWidgets", type: "flags", title: "Виджеты панели", def: ["workspaces","clock","keyboard","status","notifications"], choices: widgetChoices },
+    { section: "profiles", group: "Работа", key: "profiles.workCards", type: "flags", title: "Карточки обзора", def: ["clock","calendar","system","notes","network"], choices: cardChoices },
+    { section: "profiles", group: "Отдых", key: "profiles.restWidgets", type: "flags", title: "Виджеты панели", def: ["workspaces","clock","media","weather","tray","keyboard","status","notifications"], choices: widgetChoices },
+    { section: "profiles", group: "Отдых", key: "profiles.restCards", type: "flags", title: "Карточки обзора", def: ["clock","calendar","weather","media","notes"], choices: cardChoices },
     // ---------- Тема ----------
     { section: "appearance", group: "Режим", key: "theme.mode", type: "choice", title: "Режим", def: "dark",
       choices: [["dark", "Тёмный"], ["light", "Светлый"]], keywords: "тёмная светлая ночь день" },
@@ -159,6 +181,18 @@ var options = [
     { section: "bar", group: "Вид", key: "bar.rightClickDashboard", type: "switch", title: "Правый клик — окно часов",
       def: true, hint: "Правый клик по свободному месту панели открывает календарь, погоду, плеер и заметки",
       keywords: "пкм мышь календарь dashboard" },
+    { section: "bar", group: "Главное меню", key: "bar.compactHeader", type: "switch", title: "Компактная строка состояния", def: true, hint: "Время, батарея, сеть и приватность; показатели системы — в обзоре" },
+    { section: "bar", group: "Главное меню", key: "bar.quickActions", type: "flags", title: "Быстрые переключатели", hint: "Выберите до четырёх кнопок", maxSelected: 4, def: ["focus", "dnd", "mic", "caffeine"], choices: quickChoices },
+    { section: "bar", group: "Главное меню", key: "bar.pinnedActions", type: "flags", title: "Закреплённые действия", hint: "До четырёх действий в разделе «Управление»", maxSelected: 4, def: ["note", "folder", "screenshot"], choices: [["note", "Новая заметка"], ["folder", "Папка"], ["screenshot", "Скриншот"], ["timer", "Таймер"], ["search", "Поиск"], ["clipboard", "Буфер обмена"], ["settings", "Настройки"]] },
+    { section: "bar", group: "Главное меню", key: "bar.pinnedDirectory", type: "text", title: "Закреплённая папка", def: "", hint: "Пусто — домашняя папка; можно указать путь с ~/" },
+    { section: "bar", group: "Dynamic Island", key: "bar.autoHide", type: "switch", title: "Скрывать островок по умолчанию", def: true, hint: "Появляется у верхнего края экрана, по команде или при новом событии" },
+    { section: "bar", group: "Dynamic Island", key: "bar.islandHint", type: "switch", title: "Маркер скрытого островка", def: true, hint: "Небольшая полоска по центру верхнего края: наведите для раскрытия, нажмите для виджетов" },
+    { section: "bar", group: "Dynamic Island", key: "bar.islandNotifications", type: "switch", title: "Уведомления внутри островка", def: true },
+    { section: "bar", group: "Dynamic Island", key: "bar.islandOsd", type: "switch", title: "Громкость и яркость внутри островка", def: true },
+    { section: "bar", group: "Dynamic Island", key: "bar.islandGlance", type: "switch", title: "Музыка и быстрые действия при наведении", def: true },
+    { section: "bar", group: "Dynamic Island", key: "bar.islandCollapseDelay", type: "slider", title: "Задержка сворачивания", def: 450, min: 100, max: 1500, step: 50, unit: "ms" },
+    { section: "bar", group: "Виджеты", key: "bar.workspaceStyle", type: "choice", title: "Вид рабочих столов", def: "map",
+      choices: [["map", "Мини-карта"], ["dots", "Точки"], ["bars", "Полоски"], ["numbers", "Номера"]] },
     { section: "bar", group: "Виджеты", type: "custom", component: "barLayout", title: "Расположение виджетов",
       keywords: "зоны слева справа центр" },
     { section: "bar", group: "Трей", type: "custom", component: "trayItems", title: "Значки трея",
@@ -329,6 +363,8 @@ var options = [
       hint: "Например: English (US)=EN; Russian=RU. Пусто — две первые буквы", keywords: "раскладка язык" },
 
     // ---------- Питание ----------
+    { section: "privacy", group: "Наблюдение", key: "system.privacyIndicator", type: "switch", title: "Индикатор приватности", def: true, keywords: "privacy приватность камера микрофон экран", hint: "Показывать приложения, использующие микрофон, камеру и экран" },
+    { section: "focus", group: "Режим", key: "system.focusMinutes", type: "choice", title: "Длительность фокусировки", def: 25, keywords: "focus фокусировка концентрация", choices: [[0, "Пока не выключу"], [25, "25 минут"], [50, "50 минут"], [60, "1 час"], [120, "2 часа"]] },
     { section: "power", group: "Батарея", key: "system.batteryWarning", type: "choice", title: "Предупреждать о низком заряде",
       def: 15, choices: [[0, "Нет"], [10, "10 %"], [15, "15 %"], [20, "20 %"], [30, "30 %"]] },
     { section: "power", group: "Батарея", key: "system.batteryCritical", type: "choice", title: "Срочное предупреждение",
@@ -368,6 +404,7 @@ var options = [
     { section: "lock", group: "Вид", key: "lock.showBattery", type: "switch", title: "Заряд батареи", def: true },
     { section: "lock", group: "Вид", key: "lock.avatarPath", type: "text", title: "Аватар", def: "",
       hint: "Путь к картинке; пусто — ~/.face" },
+    { section: "lock", group: "PIN", key: "lock.pinEnabled", type: "switch", title: "Разрешить вход по PIN", def: false, hint: "По умолчанию используется пароль вашей учётной записи в системе" },
     { section: "lock", group: "PIN", type: "custom", component: "pin", title: "PIN", keywords: "пароль код" },
     { section: "lock", group: "Проверка", type: "action", action: "previewLock", title: "Посмотреть экран блокировки" },
     { section: "lock", group: "Проверка", type: "action", action: "lockNow", title: "Заблокировать сейчас" }
@@ -376,6 +413,7 @@ var options = [
 // Подпись значения ползунка.
 function formatValue(option, value) {
     switch (option.unit) {
+    case "minutes": return `${Math.round(value)} мин`;
     case "px":
         return `${Math.round(value)} px`;
     case "percent":

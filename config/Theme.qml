@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "fallback-palette.js" as Fallback
+import "color.js" as Color
 
 // Дизайн-токены оболочки. Цвета читаются из palette.json (его пишет сервис
 // ColorScheme по обоям) для режима из настроек и меняются на лету с плавным
@@ -151,6 +152,16 @@ Singleton {
     // экрана 1.25 это 16 пикселей. Начертания только Regular и Medium.
     // theme.textScale (0.85–1.3) масштабирует шкалу и отступы; иконки — нет.
     readonly property real textScale: Math.max(0.85, Math.min(1.3, Settings.theme.textScale))
+    // Цвета палитры без полупрозрачных теней и затемнений.
+    readonly property color darkestColor: {
+        const candidates = [color.background, color.popup, color.surface, color.surfaceVariant,
+            color.text, color.textMuted, color.primary, color.primaryText,
+            color.primaryContainer, color.primaryContainerText, color.secondary,
+            color.secondaryText, color.tertiary, color.tertiaryText].map(value => value.toString());
+        return candidates.reduce((darkest, candidate) =>
+            Color.luminance(candidate) < Color.luminance(darkest) ? candidate : darkest);
+    }
+
     function scaled(value) {
         return Math.round(value * textScale);
     }
@@ -190,8 +201,8 @@ Singleton {
     readonly property bool borders: Settings.theme.borders
     readonly property bool shadows: Settings.theme.shadows && !economy
 
-    // Длительности по шкале из qt-ui-design: мелкие элементы 120, панели 200,
-    // смена палитры 300; theme.animationSpeed ускоряет или замедляет их.
+    // Длительности по шкале из qt-ui-design: мелкие элементы 160, панели 280,
+    // смена палитры 420; theme.animationSpeed ускоряет или замедляет их.
     // При theme.reduceMotion все переходы мгновенные.
     readonly property bool reduceMotion: Settings.theme.reduceMotion || economy
     // Режим экономии: включается сервисом Battery, пока ноутбук работает от батареи
@@ -199,12 +210,12 @@ Singleton {
     property bool economy: false
     readonly property real animationFactor: reduceMotion ? 0 : 1 / Math.max(0.25, Math.min(4, Settings.theme.animationSpeed))
     readonly property QtObject anim: QtObject {
-        readonly property int fast: Math.round(120 * root.animationFactor)
-        readonly property int normal: Math.round(200 * root.animationFactor)
-        readonly property int slow: Math.round(300 * root.animationFactor)
+        readonly property int fast: Math.round(160 * root.animationFactor)
+        readonly property int normal: Math.round(280 * root.animationFactor)
+        readonly property int slow: Math.round(420 * root.animationFactor)
         // Вход — с замедлением в конце, выход — с ускорением.
-        readonly property int enter: Easing.OutCubic
-        readonly property int exit: Easing.InCubic
+        readonly property int enter: Easing.OutQuart
+        readonly property int exit: Easing.InOutSine
     }
 
     component ColorTransition: ColorAnimation {

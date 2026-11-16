@@ -221,9 +221,9 @@ Item {
                 text: root.context.busy ? "Проверка…"
                     : root.context.error !== "" ? root.context.error
                     : root.context.preview ? "Предпросмотр: Esc — закрыть"
-                    : Lock.hasPin && !Lock.pinBlocked ? "Введите PIN или пароль"
-                    : Lock.pinBlocked ? "PIN временно отключён — введите пароль"
-                    : "Введите пароль, чтобы разблокировать"
+                    : Settings.lock.pinEnabled && Lock.hasPin && !Lock.pinBlocked ? "Введите PIN или пароль"
+                    : Settings.lock.pinEnabled && Lock.pinBlocked ? "PIN временно отключён — введите пароль"
+                    : "Введите системный пароль"
             }
         }
     }

@@ -21,10 +21,19 @@ Singleton {
     property var receivedAt: ({})
 
     property bool centerOpen: false
+    onCenterOpenChanged: {
+        if (centerOpen)
+            popups = [];
+    }
 
-    readonly property bool dnd: Settings.notifications.dnd
+    readonly property bool dnd: Settings.notifications.dnd || FocusMode.active || Profiles.quiet
+    onDndChanged: {
+        if (dnd) popups = popups.filter(n => n.urgency === NotificationUrgency.Critical);
+    }
 
     function setDnd(value) {
+        if (!value && FocusMode.active) FocusMode.stop();
+        if (!value && Profiles.quiet) Profiles.select("custom");
         Settings.notifications.dnd = value;
         if (value)
             popups = popups.filter(n => n.urgency === NotificationUrgency.Critical);
@@ -76,7 +85,7 @@ Singleton {
                 root.receivedAt = Object.assign({}, root.receivedAt, { [notification.id]: new Date() });
 
             const critical = notification.urgency === NotificationUrgency.Critical;
-            if (!notification.lastGeneration && (!root.dnd || critical))
+            if (!notification.lastGeneration && !root.centerOpen && (!root.dnd || critical))
                 root.popups = [notification].concat(root.popups.filter(n => n.id !== notification.id));
 
             notification.closed.connect(() => {
