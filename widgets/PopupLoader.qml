@@ -34,7 +34,7 @@ LazyLoader {
     // Окно на экране: открыто или доигрывает закрытие.
     readonly property bool windowVisible: open || closing
 
-    readonly property int exitDuration: Theme.anim.normal
+    readonly property int exitDuration: Theme.anim.fast
 
     active: open || closing || (keepLoaded && wasOpen)
 

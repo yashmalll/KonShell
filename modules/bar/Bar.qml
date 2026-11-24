@@ -12,7 +12,7 @@ import qs.modules.controlcenter
 
 // Панель на каждом мониторе; Variants сам создаёт и удаляет
 // окна при подключении и отключении мониторов.
-// Dynamic Island: компактные часы и активность, при наведении — все три зоны.
+// Единая полоса с постоянными зонами и раскрываемыми по клику разделами.
 // Какие виджеты где — bar.left/center/right в настройках (окно «Настройки» → «Панель»);
 // изменения применяются сразу.
 Variants {
@@ -61,9 +61,9 @@ Variants {
         screen: modelData
         WlrLayershell.namespace: "konshell-bar"
         WlrLayershell.layer: WlrLayer.Overlay
-        // Островок поверх окон, без зарезервированной полосы рабочего стола.
-        exclusionMode: ExclusionMode.Ignore
-        exclusiveZone: 0
+        // Постоянная полоса резервирует место над окнами.
+        exclusionMode: ExclusionMode.Normal
+        exclusiveZone: fullscreen ? 0 : Settings.panelHeight - 16
         anchors {
             top: true
             left: true
@@ -81,7 +81,7 @@ Variants {
             if (!toastMode) suppressHover = pointerInside;
         }
         readonly property bool levelVisible: Settings.bar.islandOsd && activeScreen && Ui.islandOsdShown
-        readonly property bool glanceVisible: Settings.bar.islandGlance && !toastMode && expanded && !Ui.dashboardOpen && !Ui.controlCenterOpen && !Notifications.centerOpen && !Ui.privacyOpen && !Ui.timerOpen
+        readonly property bool glanceVisible: false
         readonly property bool hasDetails: panelOpen || incoming !== null || levelVisible || glanceVisible
         readonly property string contentMode: panelOpen ? (showingDashboard ? "dashboard" : Ui.timerOpen ? "timer" : Ui.privacyOpen ? "privacy" : Ui.controlCenterOpen ? "control:" + Ui.controlCenterPage : "history") : incoming !== null ? "notification" : levelVisible ? "level" : glanceVisible ? "glance" : "rest"
         // Отрисованная страница меняется после ухода прежней, а при закрытии
@@ -154,7 +154,7 @@ Variants {
         readonly property string panelTitle: displayMode === "dashboard" ? "Обзор дня" : displayMode === "timer" ? "Таймер и Pomodoro" : displayMode.startsWith("control:") ? "Управление" : displayMode === "privacy" ? "Приватность" : "Уведомления"
         // Размер Wayland-окна не меняется каждый кадр; ввод ограничивает mask.
         readonly property bool motionRunning: revealMotion.running || widthMotion.running || heightMotion.running || radiusMotion.running
-        implicitHeight: panelOpen || motionRunning ? modelData.height : Math.max(surfaceHeight, island.y + island.height + 14)
+        implicitHeight: modelData.height
         WlrLayershell.keyboardFocus: panelOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
         onPanelOpenChanged: {
             if (panelOpen)
@@ -172,7 +172,7 @@ Variants {
         property bool hoverReady: false
         property bool suppressHover: false
         readonly property bool fullscreen: Niri.fullscreenOn(modelData.name, modelData.width, modelData.height)
-        readonly property bool revealed: expanded || (!fullscreen && (!Settings.bar.autoHide || Privacy.active))
+        readonly property bool revealed: !fullscreen || panelOpen
         property real markerPresence: fullscreen ? 0 : 1
         Behavior on markerPresence { NumberAnimation { duration: bar.motion.normal; easing.type: Easing.InOutSine } }
         readonly property real markerTextReveal: Math.max(0, Math.min(1, (markerPresence - 0.55) / 0.45))
@@ -180,7 +180,7 @@ Variants {
         readonly property bool pointerInside: islandHover.hovered || (centralHover.hovered && (!revealed || closing || layoutOrigin === "center")) || leftMarker.hovered || rightMarker.hovered
         // Закрытие следует за общим состоянием, даже если скрывшийся боковой
         // маркер не прислал leave или страница открылась без входа в центр.
-        readonly property bool shouldAutoClose: expanded && !pointerInside && !statusLine.trayOpen && !BluetoothState.interactionPending && !toastMode
+        readonly property bool shouldAutoClose: panelOpen && !pointerInside && !statusLine.trayOpen && !BluetoothState.interactionPending && !toastMode
         function syncAutoClose() {
             if (shouldAutoClose) {
                 if (!collapseDelay.running) collapseDelay.restart();
@@ -188,7 +188,7 @@ Variants {
         }
         onShouldAutoCloseChanged: Qt.callLater(syncAutoClose)
         property string surfaceOrigin: "center"
-        readonly property string layoutOrigin: revealed || closing ? surfaceOrigin : "center"
+        readonly property string layoutOrigin: "center"
         readonly property real collapsedWidth: markerWidth - markerCurve * (layoutOrigin === "center" ? 2 : 1)
         function openSection(section) {
             Ui.islandOrigin = section === "dashboard" ? "left" : "right";
@@ -214,11 +214,11 @@ Variants {
         readonly property real motionScale: Settings.theme.reduceMotion ? 0
             : 1 / Math.max(0.25, Math.min(4, Settings.theme.animationSpeed))
         readonly property QtObject motion: QtObject {
-            readonly property int fast: Math.round(220 * bar.motionScale)
-            readonly property int normal: Math.round(360 * bar.motionScale)
-            readonly property int slow: Math.round(560 * bar.motionScale)
+            readonly property int fast: Theme.anim.fast
+            readonly property int normal: Theme.anim.normal
+            readonly property int slow: Theme.anim.slow
         }
-        property bool revealReady: false
+        property bool revealReady: true
         property real revealProgress: revealReady ? 1 : 0
         readonly property real revealAmount: Math.max(0, Math.min(1, revealProgress))
         readonly property real markerCorner: Math.min(2 + 5 * markerPresence, (2 + 5 * markerPresence) * Theme.cornerScale)
@@ -303,7 +303,7 @@ Variants {
             duration: bar.motion.normal
             easing.type: Easing.OutQuart
         }
-        readonly property bool expanded: (hoverReady && !suppressHover && !compactContent.activityHovered) || collapseDelay.running || statusLine.trayOpen || panelOpen || (activeScreen && Ui.controlCenterOpen) || incoming !== null || levelVisible || (Ui.islandPinned && activeScreen)
+        readonly property bool expanded: true
 
         // Полноэкранный ввод только у открытых панелей: клик снаружи закрывает их.
         mask: panelOpen ? null : inputMask
@@ -487,9 +487,9 @@ Variants {
             Rectangle {
                 id: island
                 x: bar.layoutOrigin === "left" ? 0 : bar.layoutOrigin === "right" ? inputArea.width - width : (inputArea.width - width) / 2
-                readonly property real targetWidth: Math.min(bar.width - 16, bar.displayExpanded ? (bar.displayPanelOpen ? ((bar.displayMode === "dashboard") ? 1360 : 880) : (bar.displayMode === "notification") ? 480 : Settings.bar.compactHeader ? 640 : Math.max(expandedContent.implicitWidth + 16, bar.hasDetails ? 460 : 0)) : compactContent.implicitWidth + 24)
+                readonly property real targetWidth: bar.width
                 readonly property real targetHeight: bar.displayExpanded ? bar.surfaceHeight - 16 : Math.max(34, Settings.panelHeight - 22)
-                readonly property real targetRadius: bar.displayExpanded && (bar.displayPanelOpen || bar.displayMode !== "rest") ? 24 : targetHeight / 2
+                readonly property real targetRadius: 0
                 property real shapeWidth: targetWidth
                 property real shapeHeight: targetHeight
                 property real shapeRadius: targetRadius
@@ -510,7 +510,7 @@ Variants {
                 topRightRadius: 0
                 bottomLeftRadius: bar.layoutOrigin === "left" ? 0 : radius
                 bottomRightRadius: bar.layoutOrigin === "right" ? 0 : radius
-                color: Qt.rgba(markerColor.r + (Theme.color.background.r - markerColor.r) * bar.revealAmount, markerColor.g + (Theme.color.background.g - markerColor.g) * bar.revealAmount, markerColor.b + (Theme.color.background.b - markerColor.b) * bar.revealAmount, 1)
+                color: Theme.alpha(Theme.color.surface, Theme.surfaceOpacity)
                 antialiasing: true
                 clip: true
                 visible: bar.revealProgress > 0
@@ -579,19 +579,20 @@ Variants {
                     }
 
                     Flickable {
+                        id: headerViewport
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right
                         height: Settings.panelHeight - 16
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
-                        contentWidth: expandedContent.implicitWidth
+                        contentWidth: Math.max(width, expandedContent.implicitWidth)
                         contentHeight: height
                         boundsBehavior: Flickable.StopAtBounds
                         flickableDirection: Flickable.HorizontalFlick
-                        opacity: bar.displayExpanded && !(bar.displayMode === "notification") && !bar.displayPanelOpen && !Settings.bar.compactHeader ? 1 : 0
+                        opacity: bar.displayExpanded && !(bar.displayMode === "notification") && !bar.displayPanelOpen ? 1 : 0
                         visible: opacity > 0
-                        enabled: bar.displayExpanded && !(bar.displayMode === "notification") && !bar.displayPanelOpen && !Settings.bar.compactHeader
+                        enabled: bar.displayExpanded && !(bar.displayMode === "notification") && !bar.displayPanelOpen
                         clip: true
                         Behavior on opacity {
                             NumberAnimation {
@@ -599,29 +600,33 @@ Variants {
                             }
                         }
 
-                        RowLayout {
+                        Item {
                             id: expandedContent
+                            width: headerViewport.contentWidth
                             height: parent.height
-                            spacing: 10
+                            implicitWidth: leftZone.implicitWidth + centerZone.implicitWidth + rightZone.implicitWidth + 64
                             Zone {
                                 id: leftZone
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
                                 ids: Profiles.idsForZone("left")
                             }
                             Zone {
                                 id: centerZone
+                                anchors.centerIn: parent
                                 ids: Profiles.idsForZone("center")
                             }
                             Zone {
                                 id: rightZone
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
                                 ids: Profiles.idsForZone("right")
                             }
+                            // Индикатор приватности всегда доступен рядом с правой зоной.
                             PrivacyIndicator {
-                                Layout.alignment: Qt.AlignVCenter
-                            }
-                            TextButton {
-                                text: FocusMode.summary
-                                visible: FocusMode.active
-                                onClicked: FocusMode.stop()
+                                anchors.right: rightZone.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
@@ -634,7 +639,7 @@ Variants {
                         anchors.leftMargin: 16
                         anchors.rightMargin: 16
                         height: Settings.panelHeight - 16
-                        visible: bar.displayExpanded && !(bar.displayMode === "notification") && (bar.displayPanelOpen || Settings.bar.compactHeader)
+                        visible: bar.displayExpanded && !(bar.displayMode === "notification") && bar.displayPanelOpen
                         title: bar.displayPanelOpen ? bar.panelTitle : ""
                         closable: bar.displayPanelOpen
                         onCloseRequested: bar.closePanel()
@@ -772,6 +777,7 @@ Variants {
             height: opacity > 0 ? bar.markerHeight + 4 : 0
             opacity: Settings.bar.islandHint && !Lock.locked && width >= 84 ? Math.max(0, 1 - bar.revealAmount * 3) : 0
             visible: opacity > 0
+            active: false
             source: "IslandEdgeMarker.qml"
             onLoaded: {
                 item.label = "Обзор";
@@ -792,6 +798,7 @@ Variants {
             height: leftMarker.height
             opacity: leftMarker.opacity
             visible: opacity > 0
+            active: false
             source: "IslandEdgeMarker.qml"
             onLoaded: {
                 item.label = "Управление";
@@ -922,7 +929,7 @@ Variants {
         }
     }
 
-    // Каждый виджет — отдельный блок с собственной поверхностью.
+    // Виджеты лежат на общей поверхности панели.
     // Скрытые виджеты не оставляют пустых капсул и промежутков.
     component Zone: RowLayout {
         id: zone
@@ -948,8 +955,8 @@ Variants {
                 implicitWidth: hasContent ? (modelData === "windowTitle" ? Math.min(180, widget.item.implicitWidth) : widget.item.implicitWidth) + 16 : 0
                 implicitHeight: Math.max(28, Settings.panelHeight - 28)
                 radius: implicitHeight / 2
-                color: blockHover.hovered ? Theme.color.hover : accent ? Theme.alpha(Theme.color.primary, 0.12) : Theme.alpha(Theme.color.text, 0.045)
-                border.width: Theme.borders ? 1 : 0
+                color: blockHover.hovered ? Theme.color.hover : "transparent"
+                border.width: 0
                 border.color: accent ? Theme.alpha(Theme.color.primary, 0.16) : Theme.alpha(Theme.color.outline, 0.08)
                 Behavior on color {
                     ColorAnimation {

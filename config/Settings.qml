@@ -10,8 +10,8 @@ Singleton {
     id: root
 
     readonly property string settingsPath: Paths.settings
-    // Общая геометрия островка и отступы открываемых под ним панелей.
-    readonly property int panelHeight: Math.max(56, bar.height + 24)
+    // Высота полосы и отступы открываемых под ней панелей.
+    readonly property int panelHeight: Math.max(44, bar.height + 16)
 
     property alias timer: adapter.timer
     property alias profiles: adapter.profiles

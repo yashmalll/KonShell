@@ -73,7 +73,7 @@ Item {
     // сворачивание — короче и с ускорением к краю.
     Behavior on progress {
         NumberAnimation {
-            duration: Theme.reduceMotion ? 0 : root.shown ? Theme.anim.slow + 20 : Theme.anim.normal
+            duration: Theme.reduceMotion ? 0 : root.shown ? Theme.anim.normal : Theme.anim.fast
             easing.type: root.shown ? Easing.OutQuint : Easing.InCubic
         }
     }
@@ -85,21 +85,9 @@ Item {
 
         x: 0
         width: root.width
-        height: Math.round(root.height * root.progress)
+        height: root.height * root.progress
         y: root.enterFrom > 0 ? root.height - height : 0
         clip: true
-
-        // Тень под полупрозрачной панелью просвечивала бы неровным пятном,
-        // поэтому при прозрачности глубину передают размытие и рамка.
-        layer.enabled: root.elevated && Theme.shadows && !Theme.translucent
-        layer.effect: MultiEffect {
-            shadowEnabled: true
-            shadowColor: Theme.color.shadow
-            shadowBlur: 0.8
-            shadowVerticalOffset: 4
-            // Тень должна поместиться в отрисовку слоя.
-            autoPaddingEnabled: true
-        }
 
         // Фон и содержимое — полного размера, на своём месте относительно root.
         Rectangle {
@@ -112,6 +100,20 @@ Item {
             color: root.color
             border.width: Theme.borders ? 1 : 0
             border.color: Theme.color.border
+
+            // Слой тени имеет постоянный размер фона во время раскрытия.
+            // Тень под полупрозрачной панелью просвечивала бы неровным пятном,
+            // поэтому при прозрачности глубину передают размытие и рамка.
+            layer.enabled: root.elevated && Theme.shadows && !Theme.translucent
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: Theme.color.shadow
+                shadowBlur: 0.8
+                shadowVerticalOffset: 4
+                // Тень должна поместиться в отрисовку слоя.
+                autoPaddingEnabled: true
+            }
+
         }
 
         Item {
